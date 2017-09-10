@@ -1,3 +1,9 @@
+*.zip
+*.ZIP
+*.txt
+*.bin
+__data__/
+__out__/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -1,7 +1,13 @@
+# dataset files
 *.zip
 *.ZIP
 *.txt
 *.bin
+
+# eclipse project files
+.project
+.pydevproject
+
 __data__/
 __out__/
 # Byte-compiled / optimized / DLL files

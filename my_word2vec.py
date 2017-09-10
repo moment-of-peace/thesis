@@ -30,30 +30,8 @@ from six.moves import urllib
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
-# Step 1: Download the data.
-url = 'http://mattmahoney.net/dc/'
-
-
-# pylint: disable=redefined-outer-name
-def maybe_download(filename, expected_bytes):
-  """Download a file if not present, and make sure it's the right size."""
-  local_filename = os.path.join(gettempdir(), filename)
-  if not os.path.exists(local_filename):
-    print('no')
-    #local_filename, _ = urllib.request.urlretrieve(url + filename,local_filename)
-  statinfo = os.stat(local_filename)
-  if statinfo.st_size == expected_bytes:
-    skip
-    #print('Found and verified', filename)
-  else:
-    skip
-    #print(statinfo.st_size)
-    #raise Exception('Failed to verify ' + local_filename + '. Can you get to it with a browser?')
-  return local_filename
-
 
 filename = 'myCorpus.zip'# maybe_download('myCorpus.zip', 31344016)
-
 
 # Read the data into a list of strings.
 def read_data(filename):
@@ -66,7 +44,7 @@ vocabulary = read_data(filename)
 print('Data size', len(vocabulary))
 
 # Step 2: Build the dictionary and replace rare words with UNK token.
-vocabulary_size = 50000
+vocabulary_size = 12900
 
 
 def build_dataset(words, n_words):
@@ -117,7 +95,9 @@ def generate_batch(batch_size, num_skips, skip_window):
       context_word = words_to_use.pop()
       labels[i * num_skips + j, 0] = buffer[context_word]
     if data_index == len(data):
-      buffer[:] = data[:span]
+      #buffer[:] = data[:span]
+      for word in data[:span]:
+        buffer.append(word)
       data_index = span
     else:
       buffer.append(data[data_index])
@@ -133,8 +113,8 @@ for i in range(8):
 
 # Step 4: Build and train a skip-gram model.
 
-batch_size = 128
-embedding_size = 128  # Dimension of the embedding vector.
+batch_size = 80
+embedding_size = 80  # Dimension of the embedding vector.
 skip_window = 1       # How many words to consider left and right.
 num_skips = 2         # How many times to reuse an input to generate a label.
 
@@ -194,7 +174,7 @@ with graph.as_default():
   init = tf.global_variables_initializer()
 
 # Step 5: Begin training.
-num_steps = 70001
+num_steps = 100001
 
 with tf.Session(graph=graph) as session:
   # We must initialize all variables before we use them.
@@ -220,7 +200,7 @@ with tf.Session(graph=graph) as session:
       average_loss = 0
 
     # Note that this is expensive (~20% slowdown if computed every 500 steps)
-    '''
+    
     if step % 10000 == 0:
       sim = similarity.eval()
       for i in xrange(valid_size):
@@ -232,7 +212,7 @@ with tf.Session(graph=graph) as session:
           close_word = reverse_dictionary[nearest[k]]
           log_str = '%s %s,' % (log_str, close_word)
         print(log_str)
-    '''
+    
   final_embeddings = normalized_embeddings.eval()
 
 # save model

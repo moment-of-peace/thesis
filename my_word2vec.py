@@ -29,9 +29,16 @@ import numpy as np
 from six.moves import urllib
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
+from tensorflow.contrib.tensorboard.plugins import projector
 
-
-filename = 'myCorpus.zip'# maybe_download('myCorpus.zip', 31344016)
+filename = '__data__/text8.zip'# maybe_download('myCorpus.zip', 31344016)
+# log directory for tensorboard
+LOG_DIR = '__out__/tensorboard/embedding/'
+if tf.gfile.Exists(LOG_DIR):
+  tf.gfile.DeleteRecursively(LOG_DIR)
+tf.gfile.MakeDirs(LOG_DIR)
+# associated metadata
+metadata = os.path.join(LOG_DIR, 'metedata.tsv')
 
 # Read the data into a list of strings.
 def read_data(filename):
@@ -52,7 +59,9 @@ def build_dataset(words, n_words):
   count = [['UNK', -1]]
   count.extend(collections.Counter(words).most_common(n_words - 1))
   dictionary = dict()
-  for word, _ in count:
+  fid = open(metadata, 'w')
+  fid.write('Word\tFrequency')
+  for word, freq in count:
     dictionary[word] = len(dictionary)
   data = list()
   unk_count = 0
@@ -62,6 +71,9 @@ def build_dataset(words, n_words):
       unk_count += 1
     data.append(index)
   count[0][1] = unk_count
+  for word, freq in count:
+    fid.write('\n%s\t%d'%(word, freq))
+  fid.close()
   reversed_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
   return data, count, dictionary, reversed_dictionary
 
@@ -114,7 +126,7 @@ for i in range(8):
 # Step 4: Build and train a skip-gram model.
 
 batch_size = 80
-embedding_size = 80  # Dimension of the embedding vector.
+embedding_size = 100  # Dimension of the embedding vector.
 skip_window = 1       # How many words to consider left and right.
 num_skips = 2         # How many times to reuse an input to generate a label.
 
@@ -158,7 +170,7 @@ with graph.as_default():
                      inputs=embed,
                      num_sampled=num_sampled,
                      num_classes=vocabulary_size))
-
+  tf.summary.scalar('loss', loss)
   # Construct the SGD optimizer using a learning rate of 1.0.
   optimizer = tf.train.GradientDescentOptimizer(1.0).minimize(loss)
 
@@ -176,7 +188,19 @@ with graph.as_default():
 # Step 5: Begin training.
 num_steps = 100001
 
+# save to tensorboard summary
+savePath = os.path.join(LOG_DIR, 'model.ckpt')
+
+config = projector.ProjectorConfig()
+embedingMeta = config.embeddings.add()
+embedingMeta.tensor_name = normalized_embeddings.name
+embedingMeta.metadata_path = metadata
+summary_writer = tf.summary.FileWriter(LOG_DIR)
+
+
 with tf.Session(graph=graph) as session:
+  merged = tf.summary.merge_all()
+  sum_writer = tf.summary.FileWriter(LOG_DIR + '/train', session.graph)
   # We must initialize all variables before we use them.
   init.run()
   print('Initialized')
@@ -189,16 +213,21 @@ with tf.Session(graph=graph) as session:
 
     # We perform one update step by evaluating the optimizer op (including it
     # in the list of returned values for session.run()
-    _, loss_val = session.run([optimizer, loss], feed_dict=feed_dict)
+    summary, _, loss_val = session.run([merged, optimizer, loss], feed_dict=feed_dict)
     average_loss += loss_val
 
     if step % 2000 == 0:
+      # save model var
+      saver = tf.train.Saver()
+      saver.save(session, savePath, step)
+      #if step > 4000:
+      sum_writer.add_summary(summary, step)
       if step > 0:
         average_loss /= 2000
       # The average loss is an estimate of the loss over the last 2000 batches.
       print('Average loss at step ', step, ': ', average_loss)
       average_loss = 0
-
+      
     # Note that this is expensive (~20% slowdown if computed every 500 steps)
     
     if step % 10000 == 0:
@@ -214,8 +243,10 @@ with tf.Session(graph=graph) as session:
         print(log_str)
     
   final_embeddings = normalized_embeddings.eval()
-
+projector.visualize_embeddings(summary_writer, config)
+sum_writer.close()
 # save model
+'''
 output = open('word2vec_model.txt', 'wt')
 modelShape = final_embeddings.shape
 output.write(str(modelShape[0]) + ' ' + str(modelShape[1]) + '\n')
@@ -226,7 +257,7 @@ for row in xrange(modelShape[0]):
         content = content + ' ' + str(final_embeddings[row][col])
     output.write(content + '\n')
 output.close()
-
+'''
 # Step 6: Visualize the embeddings.
 
 

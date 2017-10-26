@@ -1,6 +1,6 @@
 # binary data
-.npy
-.pkl
+*.npy
+*.pkl
 
 # dataset files
 *.zip

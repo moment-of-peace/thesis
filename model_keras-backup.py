@@ -1,16 +1,18 @@
+'''
+generate corresponding results for training documents
+Author: Yi Liu
+'''
 import numpy as np
+import keras.layers as kl
+import keras.models as km
+#import gensim
 import os
-import pickle
 
-# load binary vocabulary and embedding weights file
-def load_model(modelFile):
-    weights = np.load('weights_%s.npy'%(modelFile))  # load weights from file
-    with open('vocab_%s.pkl'%(modelFile), 'rb') as handle:   # load vocabulary from file
-        vocab = pickle.load(handle)
-    return vocab, weights
+global model
 
 def loadW2VModel(modelFile):
-    return gensim.models.KeyedVectors.load_word2vec_format(modelFile, binary=False)
+    global model
+    model = gensim.models.KeyedVectors.load_word2vec_format(modelFile, binary=False)
 
 def gen_embed_model(modelFile):
     vocab = {}  # {'word': index, ...}
@@ -34,59 +36,6 @@ def gen_embed_model(modelFile):
             line = f.readline()
             i = i+1
     return [vocab, vec]
-
-# find common files in two directories and sort by name
-def sortedCommonFiles(path1, path2):
-    flist = commonFiles(path1, path2)
-    names = []
-    for f in flist:
-        names.append(int(f))
-    names.sort()
-
-    flist = []
-    for n in names:
-        flist.append(str(n))
-    return flist
-
-# find common files in two directories
-def commonFiles(path1, path2):
-    #path1 = input('input path1: \n')
-    #path2 = input('input path2: \n')
-    flist = []
-    files = os.listdir(path1)
-    for f in files:
-        if os.path.exists(os.path.join(path2, f)):
-            flist.append(f)
-    return flist
-
-# do a cycling shift on a list
-def cycleShift(flist, shift, shiftSize):
-    assert(shift*shiftSize < len(flist))
-    shiftedList = flist[shift*shiftSize:]
-    shiftedList.extend(flist[0:shift*shiftSize])
-    return shiftedList
-
-# generate index of train data
-def get_index(path, filelist, vocab):
-    trainData = []
-    for f in filelist:
-        trainData.append(index_file(path+f, vocab))
-    return trainData
-def index_file(srcFile, vocab):
-    vector = []
-    with open(srcFile,'r') as src:
-        for line in src:
-            tokens = line.strip('\n').split(' ') # need handle non-letters
-            for e in tokens:
-                e = e.lower()
-                try:
-                    vector.append(vocab[e])
-                except:   # no corresponding word in w2v model
-                    try:
-                        vector.append(vocab['unk'])
-                    except:
-                        vector.append(vocab['a'])
-    return vector
 
 def extract_true_entity(srcFile):
     '''
@@ -185,6 +134,55 @@ def parse_position(position, entities, name):
             else:
                 entities[i] = {-3: name}
 
+# convert all tokens in a raw file into corresponding entities and write to a file
+def match_file(rawFile, entities):
+    newFile = rawFile + '.match'
+    with open(rawFile, 'r') as src:
+        with open(newFile, 'w') as out:
+            i = 1
+            for line in src:
+                content = line.strip('\n').split(' ')
+                for j in range(0, len(content)):
+                    entity = 'ot'
+                    # try whether there is a corresponding entity in the dictionary,
+                    # if no, use 'ot', which means 'other'
+                    try:
+                        entity = entities[i][j]
+                    except Exception:   # a single entity might be split into two lines
+                        if i in entities.keys():
+                            if -1 in entities[i] and j == entities[i][-1][0]:
+                                entity = 'b_' + entities[i][-1][1]
+                            elif -1 in entities[i] and j > entities[i][-1][0]:
+                                entity = 'i_' + entities[i][-1][1]
+                            elif -2 in entities[i] and j <= entities[i][-2][0]:
+                                entity = 'i_' + entities[i][-2][1]
+                            elif -3 in entities[i]:
+                                entity = 'i_' + entities[i][-3]
+                    out.write(entity + ' ')
+                i = i + 1
+                out.write('\r\n')
+'''
+# embed tokens in a file into vectors
+def embed_file(srcFile, flag):
+    global model
+    result = []
+
+    with open(srcFile, 'r') as src:
+        for line in src:
+            vector = []
+            tokens = line.strip('\n').split(' ') # need handle non-letters
+            for e in tokens:
+                e = e.lower()
+                try:
+                    vector.append(model[e])
+                except Exception:   # no corresponding word in w2v model
+                    vector.append(model['a'])
+            if flag == 'a':
+                result.append(vector)
+            else:
+                result.extend(vector)
+    return result
+'''
 # convert all tokens in a raw file into corresponding entities and return a list
 def gen_train_result(path1, path2, filelist):
     # map entities to vectors
@@ -234,22 +232,95 @@ def gen_train_result(path1, path2, filelist):
                                 entity = 'i_' + entities[i][-2][1]
                             elif -3 in entities[i]:
                                 entity = 'i_' + entities[i][-3]
-                    result.append(entityDict[entity])
-                    #result.append(entityDict[entity].index(1))
+                    #result.append(entityDict[entity])
+                    result.append(entityDict[entity].index(1))
         trainResult.append(result)
     return trainResult
 
-# use window method to cut datasets for training
-def gen_train_dataset(trainx, trainy, windowsize, step):
+# generate a taining dataset from a directory
+def gen_train_data(path, filelist):
+    trainSet = []
+
+    for f in filelist:
+        trainSet.append(embed_file(path+f, 'e'))
+    return trainSet
+
+# generate index of train data
+def get_index(path, filelist, vocab):
+    trainData = []
+    for f in filelist:
+        trainData.append(index_file(path+f, vocab))
+    return trainData
+def index_file(srcFile, vocab):
+    vector = []
+    with open(srcFile,'r') as src:
+        for line in src:
+            tokens = line.strip('\n').split(' ') # need handle non-letters
+            for e in tokens:
+                e = e.lower()
+                try:
+                    vector.append(vocab[e])
+                except:   # no corresponding word in w2v model
+                    try:
+                        vector.append(vocab[e])
+                    except:
+                        vector.append(vocab['a'])
+    return vector
+
+# find common files in two directory
+def commonFiles(path1, path2):
+    #path1 = input('input path1: \n')
+    #path2 = input('input path2: \n')
+    flist = []
+    files = os.listdir(path1)
+    for f in files:
+        if os.path.exists(path2 + f):
+            flist.append(f)
+    return flist
+
+def padding(x, y, length):
+    #dim = x[0][0].shape
+    for i in range(0, len(x)):
+        for j in range(len(x[i]), length):
+            #x[i].append(np.zeros(dim))
+            #y[i].append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+            x[i].append(0)
+            y[i].append(19)
+    return [x, y]
+
+# build a raw dataset containing a series of event type distribution
+def build_dataset(data, start=0, end=None, dim=60):
+    dataset = np.zeros((end-start, dim), dtype=np.int32)
+    if end == None:
+        end = len(flist)
+    for i in range(start, end):
+        dataset[i-start,:] = data[i]
+    return dataset
+
+# build dataset used for rnn training
+def build_train_set(data, size, step, dim):
+    trainSet = np.zeros((size, step, dim), dtype=np.float64)
+    for i in range(size):
+        trainSet[i,:,:] = build_dataset(data, i, i+step, dim)
+    return trainSet
+
+# build dataset used for rnn test
+def build_train_result(data, size, step, dim):
+    trainSet = np.zeros((size, dim), dtype=np.float64)
+    for i in range(size):
+        trainSet[i,:] = build_dataset(data, i+step, i+step+1, dim)
+    return trainSet
+
+def gen_train_dataset(trainx, trainy, windowsize):
     data = []
     result = []
-    for i in range(0, len(trainx)):
-        data.extend(window(trainx[i],windowsize,step))
-        result.extend(window(trainy[i],windowsize,step))
+    for i in range(len(trainx)):
+        data.extend(window(trainx[i],windowsize))
+        result.extend(window(trainy[i],windowsize))
     return data, result 
-def window(data, windowsize, step):
+def window(data, windowsize):
     result = []
-    for i in range(0, len(data)-windowsize, step):
+    for i in range(len(data)-windowsize):
         result.append(data[i:i+windowsize])
     return result
 
@@ -259,41 +330,76 @@ def drop(data, rate):
         if i%rate == 0:
             result.append(data[i])
     return result
+# the index of max element in a array
+def maxIndex(l):
+    max = l[0]
+    index = [0]
+    for i in range(1,l.shape[0]):
+        if l[i] > max:
+            index = [i]
+            max = l[i]
+        elif l[i] == max:
+            index.append(i)
+    sum = 0
+    for e in index:
+        sum += e
+    return round(sum/len(index))
 
-def main():
-    trainPath = '2009train/'
-    truthPath = '2009truth/'
-    modelFile = 'glove100'
-    '''
-    loadW2VModel(w2vModel)
-    flist = commonFiles(trainPath,truthPath)
-    trainx = gen_train_data(trainPath, flist)
-    trainy = gen_train_result(trainPath,truthPath,flist)
+def train_model(trainData, trainResult, embedModel, epoch):
+    # build and fit model
+    model = km.Sequential()
+    model.add(kl.Embedding(embedModel.shape[0],embedModel.shape[1], mask_zero=True,weights=[embedModel]))
+    model.add(kl.Bidirectional(kl.LSTM(20,activation='relu',return_sequences=True)))
+    model.add(kl.Bidirectional(kl.LSTM(20, return_sequences=True)))
+    model.add(kl.TimeDistributed(kl.Dense(20)))
+    model.compile(loss='mean_squared_error', optimizer='adam')
+    model.fit(trainData, trainResult, epochs=epoch, batch_size=100, verbose=2)
+    return model
 
-    #en = extract_true_entity('truth/72791')
-    #match_file('train/72791', en)
-    maxLen = 0  # the max artical length
-    for i in range(0, len(trainx)):
-        #print(len(trainx[i]))
-        if len(trainx[i]) > maxLen:
-            maxLen = len(trainx[i])
-    print('max length: ' + str(maxLen))
-    [trainx, trainy] = padding(trainx, trainy, maxLen)
-    '''
+# predict and evaluate
+def eval_model(testData, testResult, model):
+    predict = model.predict(testData)
+    n = 0
+    tru = []
+    pred = []
+    shape = predict.shape
+    for i in range(shape[0]):
+        for j in range(shape[1]):
+            p = maxIndex(predict[i][j])
+            t = maxIndex(testResult[i][j])
+            pred.append(p)
+            tru.append(t)
+            if p == t:
+                n += 1
+    print('ave accurate: %f'%(n/shape[0]/shape[1]))
+    with open('result.txt','wt') as tar:
+        for i in range(len(tru)):
+            tar.write('%d %d\n'%(tru[i],pred[i]))
+    return tru, pred
+    
+embedModel = np.load('weights_glove100.npy')
+trainData, trainResult = np.load('tx.npy'), np.load('ty.npy')
+testData, testResult = np.load('testx.npy'), np.load('testy.npy')
+model = train_model(trainData, trainResult, embedModel, 40)
+eval_model(testData, testResult, model)
+'''
+# predict and test
+predict = []
+for data in testx:
+    predict.append(model.predict(data))
+'''
 
-    vocab, embedModel = load_model(modelFile)
-    flist = commonFiles(trainPath,truthPath)
-    trainx = get_index(trainPath, flist, vocab)
-    trainy = gen_train_result(trainPath,truthPath,flist)
-    trainData,trainResult = gen_train_dataset(trainx[:220], trainy[:220], 20, 1)
-    trainData = drop(trainData, 5)
-    trainResult = drop(trainResult, 5)
-    testData, testResult = gen_train_dataset(trainx[220:], trainy[220:], 20, 20)
-    np.save('tx',np.array(trainData))
-    np.save('ty',np.array(trainResult))
-    np.save('testx',np.array(testData))
-    np.save('testy',np.array(testResult))
 
-if __name__ == '__main__':
-    main()
+'''
+size, window = 10000, 15
+dimIn, dimOut = 60, 20
+trainSet = build_train_set(trainx, size, window, dimIn)
+trainResult = build_train_result(trainy, size, window, dimOut)
+
+model = km.Sequential()
+model.add(kl.LSTM(20, input_shape=(window,dimIn), activation='sigmoid'))
+model.add(kl.Dense(dimOut))
+model.compile(loss='mean_squared_error', optimizer='adam')
+model.fit(trainSet, trainResult, epochs=10, batch_size=30, verbose=2)
+'''
 

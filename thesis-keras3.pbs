@@ -1,0 +1,12 @@
+#!/bin/bash
+
+#PBS -A UQ-EAIT
+
+#PBS -l nodes=1:ppn=16:intel,mem=15GB,vmem=15GB,walltime=03:00:00
+
+module load anaconda
+source activate env_tf2
+cd thesis/
+python3 model_keras0.py -S 42 -s 1
+source deactivate
+module unload anaconda

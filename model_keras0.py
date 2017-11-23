@@ -3,10 +3,15 @@ generate corresponding results for training documents
 Author: Yi Liu
 '''
 import numpy as np
+import pickle
 import keras.layers as kl
 import keras.models as km
 #import gensim
-import os
+#import os
+import sys
+import getopt
+
+import preprocessing as pre
 
 global model
 
@@ -330,6 +335,25 @@ def drop(data, rate):
         if i%rate == 0:
             result.append(data[i])
     return result
+
+def train_model(trainData, trainResult, embedModel, epoch):
+    # build and fit model
+    model = km.Sequential()
+    model.add(kl.Embedding(embedModel.shape[0],embedModel.shape[1], mask_zero=True,weights=[embedModel]))
+    model.add(kl.Bidirectional(kl.LSTM(20,activation='relu',return_sequences=True)))
+    model.add(kl.Bidirectional(kl.LSTM(20, return_sequences=True)))
+    model.add(kl.TimeDistributed(kl.Dense(20)))
+    model.compile(loss='mean_squared_error', optimizer='adam')
+    model.fit(trainData, trainResult, epochs=epoch, batch_size=100, verbose=2)
+    return model
+
+# do a cycling shift on a list
+def cycleShift(flist, shift, shiftSize):
+    assert(shift*shiftSize < len(flist))
+    shiftedList = flist[shift*shiftSize:]
+    shiftedList.extend(flist[0:shift*shiftSize])
+    return shiftedList
+
 # the index of max element in a array
 def maxIndex(l):
     max = l[0]
@@ -345,19 +369,8 @@ def maxIndex(l):
         sum += e
     return round(sum/len(index))
 
-def train_model(trainData, trainResult, embedModel, epoch):
-    # build and fit model
-    model = km.Sequential()
-    model.add(kl.Embedding(embedModel.shape[0],embedModel.shape[1], mask_zero=True,weights=[embedModel]))
-    model.add(kl.Bidirectional(kl.LSTM(20,activation='relu',return_sequences=True)))
-    model.add(kl.Bidirectional(kl.LSTM(20, return_sequences=True)))
-    model.add(kl.TimeDistributed(kl.Dense(20)))
-    model.compile(loss='mean_squared_error', optimizer='adam')
-    model.fit(trainData, trainResult, epochs=epoch, batch_size=100, verbose=2)
-    return model
-
 # predict and evaluate
-def eval_model(testData, testResult, model):
+def eval_model(testData, testResult, model, shiftSize, shift):
     predict = model.predict(testData)
     n = 0
     tru = []
@@ -372,34 +385,80 @@ def eval_model(testData, testResult, model):
             if p == t:
                 n += 1
     print('ave accurate: %f'%(n/shape[0]/shape[1]))
-    with open('result.txt','wt') as tar:
+    with open('result_%d_%d.txt'%(shiftSize, shift),'wt') as tar:
         for i in range(len(tru)):
             tar.write('%d %d\n'%(tru[i],pred[i]))
     return tru, pred
-    
-embedModel = np.load('weights_glove100.npy')
-trainData, trainResult = np.load('tx.npy'), np.load('ty.npy')
-testData, testResult = np.load('testx.npy'), np.load('testy.npy')
-model = train_model(trainData, trainResult, embedModel, 30)
-eval_model(testData, testResult, model)
-'''
-# predict and test
-predict = []
-for data in testx:
-    predict.append(model.predict(data))
-'''
+
+def main():
+    shift = 0
+    shiftSize = 42
+    weightsModelPath = 'weights_glove100.npy'
+    vocabPath = 'vocab_glove100.pkl'
+    trainPath = '2009train/'
+    truthPath = '2009truth/'
+    windowSize = 20
+    epoch = 30
+
+    # parse arguments
+    options,args = getopt.getopt(sys.argv[1:],"w:v:x:y:s:S:W:e:")
+    for opt, para in options:
+        if opt == '-w':
+            weightsModelPath = para
+        if opt == '-v':
+            vocabPath = para
+        if opt == '-x':
+            trainPath = para
+        if opt == '-y':
+            truthPath = para
+        if opt == '-s':
+            shift = int(para)
+        if opt == '-S':
+            shiftSize = int(para)
+        if opt == '-W':
+            windowSize = int(para)
+        if opt == '-e':
+            epoch = int(para)
+        
+    # load weights and vocabulary
+    embedModel = np.load(weightsModelPath)
+    with open(vocabPath, 'rb') as handle:   # load vocabulary from file
+        vocab = pickle.load(handle)
+
+    flist = pre.sortedCommonFiles(trainPath,truthPath)
+    flist = cycleShift(flist, shift, shiftSize)
+    trainx = pre.get_index(trainPath, flist, vocab)
+    trainy = pre.gen_train_result(trainPath,truthPath,flist)
+    trainData,trainResult = pre.gen_train_dataset(trainx[shiftSize:], trainy[shiftSize:], windowSize, 1)
+    trainData = pre.drop(trainData, int(windowSize/4))
+    trainResult = pre.drop(trainResult, int(windowSize/4))
+    testData, testResult = pre.gen_train_dataset(trainx[0:shiftSize], trainy[0:shiftSize], windowSize, windowSize)
+
+    #trainData, trainResult = np.load('tx.npy'), np.load('ty.npy')
+    #testData, testResult = np.load('testx.npy'), np.load('testy.npy')
+    model = train_model(trainData, trainResult, embedModel, epoch)
+    eval_model(testData, np.array(testResult), model, shiftSize, shift)
+    '''
+    # predict and test
+    predict = []
+    for data in testx:
+        predict.append(model.predict(data))
+    '''
 
 
-'''
-size, window = 10000, 15
-dimIn, dimOut = 60, 20
-trainSet = build_train_set(trainx, size, window, dimIn)
-trainResult = build_train_result(trainy, size, window, dimOut)
+    '''
+    size, window = 10000, 15
+    dimIn, dimOut = 60, 20
+    trainSet = build_train_set(trainx, size, window, dimIn)
+    trainResult = build_train_result(trainy, size, window, dimOut)
 
-model = km.Sequential()
-model.add(kl.LSTM(20, input_shape=(window,dimIn), activation='sigmoid'))
-model.add(kl.Dense(dimOut))
-model.compile(loss='mean_squared_error', optimizer='adam')
-model.fit(trainSet, trainResult, epochs=10, batch_size=30, verbose=2)
-'''
+    model = km.Sequential()
+    model.add(kl.LSTM(20, input_shape=(window,dimIn), activation='sigmoid'))
+    model.add(kl.Dense(dimOut))
+    model.compile(loss='mean_squared_error', optimizer='adam')
+    model.fit(trainSet, trainResult, epochs=10, batch_size=30, verbose=2)
+    '''
+
+if __name__ == '__main__':
+    main()
 

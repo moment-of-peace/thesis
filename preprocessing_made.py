@@ -133,7 +133,7 @@ def stepOne(corp, entity):
             trace.append((i-1, -num))
             i += num
             continue
-        elif corp[i]=='\t' or corp[i]=='\n':
+        elif corp[i]=='\t' or corp[i]=='\n' or corp[i]==' ':
             c.append(' ')
             e.append(' ')
         else:
@@ -241,7 +241,7 @@ def convertNum(word):
     return result
     
 # check corpus and entities
-def checkCorpEnti(corpPath, entityPath):
+def checkCorpEnti(corpPath, entityPath, flag):
     flist = os.listdir(corpPath)
     flist2 = os.listdir(entityPath)
     assert(len(flist) == 876)
@@ -255,10 +255,11 @@ def checkCorpEnti(corpPath, entityPath):
             entity = src.read()
         assert(len(corp) == len(entity))
         
-        for i in range(len(corp)):
-            if (corp[i]==' ' and entity[i]!=' ') or (corp[i]!=' ' and entity[i]==' '):
-                print('  wrong space at', i)
-                exit()
+        if flag:
+            for i in range(len(corp)):
+                if (corp[i]==' ' and entity[i]!=' ') or (corp[i]!=' ' and entity[i]==' '):
+                    print('  wrong space at', i)
+                    exit()
     print('checks finished')
 
 def main():
@@ -266,7 +267,7 @@ def main():
     #toTokenEntities('__data__/MADE-1.0/corpus', '__data__/MADE-1.0/annotations')
     #preprocesses(P+'process_stepThree_corp', P+'entities', [4])
     #checkCorpEnti(P+'corpus', P+'entities')
-    checkCorpEnti(P+'process_stepFour_corp', P+'process_stepThree_entity')
+    checkCorpEnti(P+'process_stepFour_corp', P+'process_stepThree_entity', true)
     
 if __name__ == '__main__':
     main()

@@ -103,6 +103,8 @@ def preprocesses(corpPath, entityPath, steps, newPath='__data__/MADE-1.0/process
             corp, entity = processStep(corp, entity, stepTwo, f, newPath)
         if 3 in steps:
             corp, entity = processStep(corp, entity, stepThree, f, newPath)
+        if 4 in steps:
+            corp = stepFour(corp, f, newPath)
 
 # delete some comas and dots, to lower case, replace \n \t with spaces
 def processStep(corp, entity, stepFunc, fileName, newPath='__data__/MADE-1.0/process'):
@@ -167,6 +169,10 @@ def stepTwo(corp, entity):
                 c.append(' ')
                 e.append(' ')
                 trace.append((i-1, 1))
+        elif (corp[i] == '.' or corp[i] == ',') and pre != 0:
+            c.append(' ')
+            e.append(' ')
+            trace.append((i-1, 1))
         c.append(corp[i])
         e.append(entity[i])
         pre = cur
@@ -213,10 +219,54 @@ def stepThree(corp, entity):
         trace.append((flag[0]-1, num-1))
     return c, e, trace
 
+# convert numbers
+def stepFour(corp, fileName, newPath):
+    words = corp.split(' ')
+    newCorp = ''
+    for w in words:
+        if w.isdigit():
+            newCorp += convertNum(w) + ' '
+        else:
+            newCorp += w + ' '
+    newCorp = newCorp[:-1]  # remove tail space
+    util.write_path_file(newPath+'_stepFour_corp', fileName, newCorp)
+    return newCorp
+
+# convert a number
+def convertNum(word):
+    result = int(int(word[0])/5)*5 + 1
+    result = str(result)
+    for i in range(len(word)-1):
+        result += '0'
+    return result
+    
+# check corpus and entities
+def checkCorpEnti(corpPath, entityPath):
+    flist = os.listdir(corpPath)
+    flist2 = os.listdir(entityPath)
+    assert(len(flist) == 876)
+    assert(len(flist2) == 876)
+    
+    for f in flist:
+        print(f)
+        with open(os.path.join(corpPath, f), 'rt') as src:
+            corp = src.read()
+        with open(os.path.join(entityPath, f), 'rt') as src:
+            entity = src.read()
+        assert(len(corp) == len(entity))
+        
+        for i in range(len(corp)):
+            if (corp[i]==' ' and entity[i]!=' ') or (corp[i]!=' ' and entity[i]==' '):
+                print('  wrong space at', i)
+                exit()
+    print('checks finished')
+
 def main():
     P = '__data__/MADE-1.0/'
     #toTokenEntities('__data__/MADE-1.0/corpus', '__data__/MADE-1.0/annotations')
-    preprocesses(P+'process_stepOne_corp', P+'process_stepOne_entity', [2,3])
+    #preprocesses(P+'process_stepThree_corp', P+'entities', [4])
+    #checkCorpEnti(P+'corpus', P+'entities')
+    checkCorpEnti(P+'process_stepFour_corp', P+'process_stepThree_entity')
     
 if __name__ == '__main__':
     main()

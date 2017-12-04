@@ -31,7 +31,7 @@ from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 from tensorflow.contrib.tensorboard.plugins import projector
 
-filename = '__data__/text8.zip'# maybe_download('myCorpus.zip', 31344016)
+filename = 'joint_file.zip'# maybe_download('myCorpus.zip', 31344016)
 # log directory for tensorboard
 LOG_DIR = '__out__/tensorboard/embedding/'
 if tf.gfile.Exists(LOG_DIR):
@@ -48,10 +48,11 @@ def read_data(filename):
   return data
 
 vocabulary = read_data(filename)
+print(type(vocabulary))
 print('Data size', len(vocabulary))
 
 # Step 2: Build the dictionary and replace rare words with UNK token.
-vocabulary_size = 12900
+vocabulary_size = 6000
 
 
 def build_dataset(words, n_words):
@@ -246,7 +247,6 @@ with tf.Session(graph=graph) as session:
 projector.visualize_embeddings(summary_writer, config)
 sum_writer.close()
 # save model
-'''
 output = open('word2vec_model.txt', 'wt')
 modelShape = final_embeddings.shape
 output.write(str(modelShape[0]) + ' ' + str(modelShape[1]) + '\n')
@@ -257,7 +257,7 @@ for row in xrange(modelShape[0]):
         content = content + ' ' + str(final_embeddings[row][col])
     output.write(content + '\n')
 output.close()
-'''
+
 # Step 6: Visualize the embeddings.
 
 

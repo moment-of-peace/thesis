@@ -24,4 +24,10 @@ def counter(content):
             else:
                 print(c[i])
             
-util.process_files('__data__/MADE-1.0/process_stepThree_corp', counter)
+#util.process_files('__data__/MADE-1.0/process_stepThree_corp', counter)
+with open('joint_file','rt') as f:
+    c = f.read().split(' ')
+s = set()
+for e in c:
+    s.add(e)
+print(len(s))

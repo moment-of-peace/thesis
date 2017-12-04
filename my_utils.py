@@ -33,3 +33,18 @@ def process_files(path, func):
         with open(os.path.join(path, f), 'rt') as src:
             content = src.read()
         func(content)
+        
+# join all files in a directory and form a single file
+def join_files(path, fileName='joint_file.txt', separator=''):
+    flist = os.listdir(path)
+    sep = ''
+    for f in flist:
+        print(f)
+        with open(os.path.join(path, f), 'rt') as src:
+            content = src.read()
+        with open(fileName, 'at') as tar:
+            tar.write(sep + content)
+        sep = separator
+        
+if __name__ == '__main__':
+    join_files('__data__/MADE-1.0/process_stepFour_corp', separator=' . ')

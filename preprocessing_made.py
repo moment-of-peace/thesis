@@ -5,6 +5,8 @@ Entities represented by symbols:
 import os
 import xml.etree.ElementTree as et
 
+import my_utils as util
+
 ENTITY_DIC = {'ADE':'A',
               'Indication':'I',
               'SSLIF':'S',
@@ -31,10 +33,10 @@ def sortedFileList(path):
     return sorted(flist, key=cmp_file)
 
 # extract entities info from a single xml file, write the entities into a new file
-def parseFile(corp, annot, target, xpath):
+def parseFile(corp, anno, target, xpath):
     # parse xml
-    tree = et.parse(annot)
-    annotList = tree.getroot().findall(xpath)
+    tree = et.parse(anno)
+    annoList = tree.getroot().findall(xpath)
 
     # initialise target text, all characters except ' ' and '\n' are set to 'o' at beginning
     with open(corp, 'rt') as src:
@@ -48,7 +50,7 @@ def parseFile(corp, annot, target, xpath):
 
     #print(len(srcText),len(tarChar))
     # set corresponding entities
-    for a in annotList:
+    for a in annoList:
         # entity and its symbol
         entity = a.find(TAG_ENTITY).text
         try:
@@ -74,16 +76,147 @@ def parseFile(corp, annot, target, xpath):
     with open(target, 'wt') as tar:
         tar.write(tarText)
 	
-def toTokenEntities(corpPath, annotPath, xpath = './document/passage/annotation', newPath='__data__/MADE-1.0/entities'):
+def toTokenEntities(corpPath, annoPath, xpath = './document/passage/annotation', newPath='__data__/MADE-1.0/entities'):
     if not os.path.exists(newPath):
         os.makedirs(newPath)
     
     flist = os.listdir(corpPath)
     for f in flist:
-        parseFile(os.path.join(corpPath, f), os.path.join(annotPath, f+'.bioc.xml'), os.path.join(newPath, f), xpath)
+        parseFile(os.path.join(corpPath, f), os.path.join(annoPath, f+'.bioc.xml'), os.path.join(newPath, f), xpath)
+
+# preprocessing for corpus and annotations
+def preprocesses(corpPath, entityPath, steps, newPath='__data__/MADE-1.0/process'):
+    if not os.path.exists(newPath):
+        os.makedirs(newPath)
+    
+    flist = os.listdir(corpPath)
+    for f in flist:
+        print(f)
+        with open(os.path.join(corpPath, f), 'rt') as src:
+            corp = src.read()
+        with open(os.path.join(entityPath, f), 'rt') as src:
+            entity = src.read()
+        # check which steps to implement
+        if 1 in steps:
+            corp, entity = processStep(corp, entity, stepOne, f, newPath)
+        if 2 in steps:
+            corp, entity = processStep(corp, entity, stepTwo, f, newPath)
+        if 3 in steps:
+            corp, entity = processStep(corp, entity, stepThree, f, newPath)
+
+# delete some comas and dots, to lower case, replace \n \t with spaces
+def processStep(corp, entity, stepFunc, fileName, newPath='__data__/MADE-1.0/process'):
+    # avoid index out of range
+    corp = ' ' + corp + ' '
+    entity = ' ' + entity + ' '
+    c, e, trace = stepFunc(corp, entity)
+    newCorp = ''.join(c)
+    newEntity = ''.join(e)
+    # write processed corpus, entity, and processing trace to new files
+    util.write_path_file('%s_%s_corp'%(newPath,stepFunc.__name__), fileName, newCorp)
+    util.write_path_file('%s_%s_entity'%(newPath,stepFunc.__name__), fileName, newEntity)
+    util.write_path_file('%s_%s_trace'%(newPath,stepFunc.__name__), fileName, util.write_list(trace))
+    
+    return newCorp, newEntity
+
+# the first step of preprocessing: remove "," and "." in numbers
+def stepOne(corp, entity):
+    c, e, trace = [], [], []
+    i = 1
+    while i < len(corp)-1:
+        if corp[i]==',' and corp[i-1].isdigit() and corp[i+1].isdigit():
+            trace.append((i-1, -1))
+        elif corp[i]=='.' and corp[i-1].isdigit() and corp[i+1].isdigit():
+            num = countDigits(corp, i+1)
+            trace.append((i-1, -num))
+            i += num
+            continue
+        elif corp[i]=='\t' or corp[i]=='\n':
+            c.append(' ')
+            e.append(' ')
+        else:
+            c.append(corp[i].lower())
+            e.append(entity[i])
+        i += 1
+    return c, e, trace
+
+# count how many digits after a dots
+def countDigits(corp, i):
+    num = 1
+    while corp[i].isdigit():
+        num += 1
+        i += 1
+    return num
+
+# insert spaces to split letters, numbers, and other signals
+def stepTwo(corp, entity):
+    c, e, trace = [], [], []
+    i = 1
+    pre = 0 # 0: space, 1: letter, 2: number, 3: other
+    while i < len(corp)-1:
+        cur = represent(corp[i])
+        if pre != 0 and cur != 0 and pre != cur:
+            # words such as "a.m." should not be split
+            if corp[i] == '.' and corp[i-1].isalpha() and corp[i+1].isalpha():
+                pass
+            elif corp[i] == '.' and corp[i-1].isalpha() and i > 1 and corp[i-2] == '.':
+                pass
+            elif cur == 1 and corp[i-1] == '.' and i > 1 and corp[i-2].isalpha():
+                pass
+            else:
+                c.append(' ')
+                e.append(' ')
+                trace.append((i-1, 1))
+        c.append(corp[i])
+        e.append(entity[i])
+        pre = cur
+        i += 1
+    return c, e, trace
+    
+# use 0, 1, 2, 3, to represent a char. 0: space, 1: letter, 2: number, 3: other
+def represent(chara):
+    if chara.isspace():
+        return 0
+    if chara.isalpha():
+        return 1
+    if chara.isdigit():
+        return 2
+    return 3
+
+# remove duplicated spaces (including start and tail spaces)
+def stepThree(corp, entity):
+    c, e, trace = [], [], []
+    i = 1
+    flag = (0, True)
+    num = 0 # how many spaces to remove
+    while i < len(corp)-1:
+        if corp[i].isspace():
+            if flag[1]:
+                num -= 1
+            else:
+                flag = (i, True)
+                num = 0
+                c.append(' ')
+                e.append(' ')
+        else:
+            if flag[1]:
+                if num < 0:
+                    trace.append((flag[0], num))
+                flag = (-1, False)
+            c.append(corp[i])
+            e.append(entity[i])   
+        i += 1
+    # handle tail space
+    if flag[1]:
+        c.pop()
+        e.pop()
+        trace.append((flag[0]-1, num-1))
+    return c, e, trace
 
 def main():
-    toTokenEntities('__data__/MADE-1.0/corpus', '__data__/MADE-1.0/annotations')
-
+    P = '__data__/MADE-1.0/'
+    #toTokenEntities('__data__/MADE-1.0/corpus', '__data__/MADE-1.0/annotations')
+    preprocesses(P+'process_stepOne_corp', P+'process_stepOne_entity', [2,3])
+    
 if __name__ == '__main__':
     main()

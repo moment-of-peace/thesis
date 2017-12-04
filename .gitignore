@@ -12,6 +12,9 @@
 .project
 .pydevproject
 
+# pycharm files
+.idea/
+
 __data__/
 __out__/
 __example__/

@@ -47,6 +47,7 @@ def main():
     if len(sys.argv) > 1:
         fileName = sys.argv[1]
     labels = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
+    labels = [0,1,2,3,4,5,6,7,8]
 
     options,args = getopt.getopt(sys.argv[1:],"f:d:b:l:m:e:")
     for opt, para in options:

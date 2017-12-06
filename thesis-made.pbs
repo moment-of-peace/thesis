@@ -2,11 +2,11 @@
 
 #PBS -A UQ-EAIT
 
-#PBS -l nodes=1:ppn=16:intel,mem=15GB,vmem=15GB,walltime=03:00:00
+#PBS -l nodes=1:ppn=16:intel,mem=15GB,vmem=15GB,walltime=02:30:00
 
 module load anaconda
 source activate env_tf2
 cd thesis/
-python3 model_keras0.py -S 42 -s 1
+python3 model_made.py -s 0
 source deactivate
 module unload anaconda

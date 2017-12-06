@@ -24,14 +24,6 @@ TAG_TEXT = 'text'
 ATTR_OFF = 'offset'
 ATTR_LEN = 'length'
 
-def cmp_file(x):
-    c = x.split('_')
-    return int(c[0]) * 100000 + int(c[1])
-
-def sortedFileList(path):
-    flist = os.listdir(path)
-    return sorted(flist, key=cmp_file)
-
 # extract entities info from a single xml file, write the entities into a new file
 def parseFile(corp, anno, target, xpath):
     # parse xml
@@ -43,10 +35,13 @@ def parseFile(corp, anno, target, xpath):
         srcText = src.read()
     tarChar = []
     for c in srcText:
+        tarChar.append(OTHER)
+        '''
         if c != ' ' and c != '\n' and c != '\t':
             tarChar.append(OTHER)
         else:
             tarChar.append(c)
+        '''
 
     #print(len(srcText),len(tarChar))
     # set corresponding entities
@@ -64,11 +59,15 @@ def parseFile(corp, anno, target, xpath):
         length = int(loc.get(ATTR_LEN))
         # set entity infomation
         for i in range(length):
+            if srcText[offset+i].isspace():
+                symbol = symbol.lower()
+            tarChar[offset+i] = symbol
+            '''
             if tarChar[offset+i] != ' ':
                 tarChar[offset+i] = symbol
             else:
                 symbol = symbol.lower()
-
+            '''
     # write characters into new file
     tarText = ''
     for c in tarChar:
@@ -264,10 +263,16 @@ def checkCorpEnti(corpPath, entityPath, flag):
 
 def main():
     P = '__data__/MADE-1.0/'
-    #toTokenEntities('__data__/MADE-1.0/corpus', '__data__/MADE-1.0/annotations')
-    #preprocesses(P+'process_stepThree_corp', P+'entities', [4])
-    #checkCorpEnti(P+'corpus', P+'entities')
-    checkCorpEnti(P+'process_stepFour_corp', P+'process_stepThree_entity', true)
+    '''
+    toTokenEntities(P+'corpus', P+'annotations')
+    preprocesses(P+'corpus', P+'entities', [1,2,3,4])
+    '''
+    checkCorpEnti(P+'corpus', P+'entities', False)
+    checkCorpEnti(P+'process_stepOne_corp', P+'process_stepOne_entity', True)
+    checkCorpEnti(P+'process_stepTwo_corp', P+'process_stepTwo_entity', True)
+    checkCorpEnti(P+'process_stepThree_corp', P+'process_stepThree_entity', True)
+    checkCorpEnti(P+'process_stepFour_corp', P+'process_stepThree_entity', True)
+    
     
 if __name__ == '__main__':
     main()

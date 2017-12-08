@@ -120,7 +120,7 @@ def processStep(corp, entity, stepFunc, fileName, newPath='__data__/MADE-1.0/pro
     
     return newCorp, newEntity
 
-# the first step of preprocessing: remove "," and "." in numbers
+# the first step of preprocessing: remove "," and "." in numbers, put spaces at positions of '\t', '\n', and ' '
 def stepOne(corp, entity):
     c, e, trace = [], [], []
     i = 1

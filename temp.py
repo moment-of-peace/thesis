@@ -1,5 +1,5 @@
-'''
 import os
+'''
 from random import shuffle
 
 folder = '2009truth'
@@ -24,6 +24,7 @@ def counter(content):
             else:
                 print(c[i])
             
+'''
 #util.process_files('__data__/MADE-1.0/process_stepThree_corp', counter)
 with open('joint_file','rt') as f:
     c = f.read().split(' ')
@@ -31,3 +32,21 @@ s = set()
 for e in c:
     s.add(e)
 print(len(s))
+'''
+corpPath = '__data__/MADE-1.0/corpus'
+entityPath = '__data__/MADE-1.0/entities'
+flist = os.listdir(corpPath)
+for f in flist:
+    #print(f)
+    with open(os.path.join(corpPath, f), 'rt') as src:
+        corp = src.read()
+    with open(os.path.join(entityPath, f), 'rt') as src:
+        entity = src.read()
+    corp = ' ' + corp + ' '
+    entity = ' ' + entity + ' '
+    i = 1
+    while i < len(corp)-1:
+        if corp[i].isspace() and entity[i].lower() != 'x' and (entity[i-1].lower() != 'x' or entity[i+1].lower() != 'x') and entity[i-1].lower() != entity[i+1].lower():
+            print(f, i, entity[i-1], entity[i], entity[i+1])
+        i += 1
+            

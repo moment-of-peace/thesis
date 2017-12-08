@@ -8,72 +8,9 @@ import keras.layers as kl
 import keras.models as km
 import sys
 import getopt
-import os
 
 import my_utils as util
-
-# convert words in files into index, return a list of different length lists
-def getIndex(path, filelist, vocab):
-    data = []
-    for f in filelist:
-        data.append(indexFile(os.path.join(path, f), vocab))
-    return data
-# convert words in a single file into index, return a list of integers
-def indexFile(src, vocab):
-    index = []
-    with open(src, 'rt') as f:
-        content = f.read().split(' ')
-    for word in content:
-        try:
-            index.append(vocab[word])
-        except KeyError:
-            index.append(vocab['UNK'])
-    return index
-
-# return a list ("results") of lists, and each nested list ("entities") is a list of entity vectors
-def genResult(path, flist):
-    # map entities to vectors
-    entityDict = {'a':[1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  'i':[0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-                  's':[0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-                  'v':[0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-                  'd':[0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                  'o':[0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                  'r':[0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-                  'f':[0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-                  'u':[0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-                  'x':[0, 0, 0, 0, 0, 0, 0, 0, 0, 1]}
-    results = []
-    for f in flist:
-        entities = []
-        with open(os.path.join(path, f), 'rt') as src:
-            content = src.read().split(' ')
-        for word in content:
-            entities.append(entityDict[word[0].lower()])
-        results.append(entities)
-    return results
-
-# use window method to cut datasets for training
-def genTrainDataset(trainx, trainy, windowsize, step):
-    data = []
-    result = []
-    for i in range(0, len(trainx)):
-        data.extend(window(trainx[i],windowsize,step))
-        result.extend(window(trainy[i],windowsize,step))
-    return data, result 
-def window(data, windowsize, step):
-    result = []
-    for i in range(0, len(data)-windowsize, step):
-        result.append(data[i:i+windowsize])
-    result.append(data[-windowsize:])
-    return result
-
-# do a cycling shift on a list
-def cycleShift(flist, shift, shiftSize):
-    assert(shift*shiftSize < len(flist))
-    shiftedList = flist[shift*shiftSize:]
-    shiftedList.extend(flist[0:shift*shiftSize])
-    return shiftedList
+import gen_dataset as gen
 
 def trainModel(trainData, trainResult, embedModel, epoch):
     # build and fit model
@@ -162,13 +99,13 @@ def main():
         vocab = pickle.load(handle)
 
     flist = util.sorted_file_list(trainPath, cmp_file)
-    flist = cycleShift(flist, shift, shiftSize)
-    trainx = getIndex(trainPath, flist, vocab)
-    trainy = genResult(truthPath,flist)
-    trainData,trainResult = genTrainDataset(trainx[shiftSize:], trainy[shiftSize:], windowSize, 10)
+    flist = gen.cycleShift(flist, shift, shiftSize)
+    trainx = gen.getIndex(trainPath, flist, vocab)
+    trainy = gen.genResult(truthPath,flist)
+    trainData,trainResult = gen.genTrainDataset(trainx[shiftSize:], trainy[shiftSize:], windowSize, 10)
     #trainData = drop(trainData, int(windowSize/4))
     #trainResult = drop(trainResult, int(windowSize/4))
-    testData, testResult = genTrainDataset(trainx[0:shiftSize], trainy[0:shiftSize], windowSize, windowSize)
+    testData, testResult = gen.genTrainDataset(trainx[0:shiftSize], trainy[0:shiftSize], windowSize, windowSize)
 
     #trainData, trainResult = np.load('tx.npy'), np.load('ty.npy')
     #testData, testResult = np.load('testx.npy'), np.load('testy.npy')

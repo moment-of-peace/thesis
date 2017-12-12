@@ -25,6 +25,21 @@ def sorted_file_list(path, comparator):
     flist = os.listdir(path)
     return sorted(flist, key=comparator)
 
+# the index of max element in a array
+def maxIndex(l):
+    max = l[0]
+    index = [0]
+    for i in range(1,l.shape[0]):
+        if l[i] > max:
+            index = [i]
+            max = l[i]
+        elif l[i] == max:
+            index.append(i)
+    sum = 0
+    for e in index:
+        sum += e
+    return round(sum/len(index))
+
 # write a file into a directory, create the path if not exists
 def write_path_file(path, fileName, content, flag='wt'):
     if not os.path.exists(path):

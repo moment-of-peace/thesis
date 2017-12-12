@@ -46,7 +46,7 @@ for f in flist:
     entity = ' ' + entity + ' '
     i = 1
     while i < len(corp)-1:
-        if corp[i].isspace() and entity[i].lower() != 'x' and (entity[i-1].lower() != 'x' or entity[i+1].lower() != 'x') and entity[i-1].lower() != entity[i+1].lower():
+        if corp[i]=='\n' and entity[i].lower() != 'x' and entity[i-1].lower() != entity[i+1].lower():# and (entity[i-1].lower() != 'x' or entity[i+1].lower() != 'x'):
             print(f, i, entity[i-1], entity[i], entity[i+1])
         i += 1
             

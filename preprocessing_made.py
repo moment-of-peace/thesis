@@ -30,7 +30,7 @@ def parseFile(corp, anno, target, xpath):
     tree = et.parse(anno)
     annoList = tree.getroot().findall(xpath)
 
-    # initialise target text, all characters except ' ' and '\n' are set to 'o' at beginning
+    # initialise target text, all characters except ' ' and '\n' are set to OTHER at beginning
     with open(corp, 'rt') as src:
         srcText = src.read()
     tarChar = []
@@ -247,7 +247,7 @@ def checkCorpEnti(corpPath, entityPath, flag):
     assert(len(flist2) == 876)
     
     for f in flist:
-        print(f)
+        #print(f)
         with open(os.path.join(corpPath, f), 'rt') as src:
             corp = src.read()
         with open(os.path.join(entityPath, f), 'rt') as src:
@@ -263,16 +263,16 @@ def checkCorpEnti(corpPath, entityPath, flag):
 
 def main():
     P = '__data__/MADE-1.0/'
-    '''
-    toTokenEntities(P+'corpus', P+'annotations')
-    preprocesses(P+'corpus', P+'entities', [1,2,3,4])
+    
+    toTokenEntities(P+'corpus', P+'annotations', newPath='tempentity')
+    #preprocesses(P+'corpus', P+'entities', [1,2,3,4])
     '''
     checkCorpEnti(P+'corpus', P+'entities', False)
     checkCorpEnti(P+'process_stepOne_corp', P+'process_stepOne_entity', True)
     checkCorpEnti(P+'process_stepTwo_corp', P+'process_stepTwo_entity', True)
     checkCorpEnti(P+'process_stepThree_corp', P+'process_stepThree_entity', True)
     checkCorpEnti(P+'process_stepFour_corp', P+'process_stepThree_entity', True)
-    
+    '''
     
 if __name__ == '__main__':
     main()

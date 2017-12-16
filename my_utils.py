@@ -95,6 +95,16 @@ def gen_weights_vocab(modelFile, name=''):
         pickle.dump(vocab, handle)
     return vocab, weights
 
+# replace line feed
+def del_linefeed(string, chara=' '):
+    result = ''
+    for c in string:
+        if c == '\n':
+            result += chara
+        else:
+            result += c
+    return result
+    
 if __name__ == '__main__':
     #join_files('__data__/MADE-1.0/process_stepFour_corp', separator=' . ')
     gen_weights_vocab('__data__/word2vec_model_made_6000.txt', name='_made_6000')

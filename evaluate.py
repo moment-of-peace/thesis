@@ -1,7 +1,25 @@
 import sys
 import getopt
 import os
+import xml.etree.ElementTree as et
 from sklearn.metrics import f1_score
+import numpy as np
+
+ENTITY_DIC = {'ADE':'A',
+              'Indication':'I',
+              'SSLIF':'S',
+              'Severity':'V',
+              'Drug':'D', 
+              'Dose':'O',
+              'Route':'R',
+              'Frequency':'F',
+              'Duration':'U'}
+TAG_ENTITY = 'infon'
+TAG_LOC = 'location'
+TAG_TEXT = 'text'
+ATTR_OFF = 'offset'
+ATTR_LEN = 'length'
+ENTITY_INDEX = {'A':0, 'I':1, 'S':2, 'V':3, 'D':4, 'O':5, 'R':6, 'F':7, 'U':8, 'X':9}
 
 def append_files(path):
     flist = os.listdir(path)
@@ -41,6 +59,58 @@ def f1_eval(fileName, labels):
     print('f1 score for each label:\n', f1_score(tru, pre, labels=labels, average=None))
     print('\nmicro f1 score:', f1_score(tru, pre, labels=labels, average='micro'))
     print('macro f1 score:', f1_score(tru, pre, labels=labels, average='macro'))
+
+# strict or relaxed f1 score
+def all_f1_score(predPath='__data__/MADE-1.0/pred', truthPath='__data__/MADE-1.0/annotations'):
+    # 9 entities, and 3 scores: TP, FP, and FN
+    scores = np.zeros([9,3])
+    flist = os.listdir(predPath)
+    for f in flist:
+        scores += f1_ner(os.path.join(predPath, f), os.path.join(truthPath, f+'.bioc.xml'))
+    # compute f1 scores for all entities
+    f1_scores = []
+    for i in range(scores.shape[0])
+        prec = scores[i,0]/(scores[i,0]+scores[i,1]
+        rec = scores[i,0]/(scores[i,0]+scores[i,2]
+        f1_scores.append(2*prec*rec/(prec+rec))
+    return f1_scores
+    
+# strict or relaxed f1 score
+def f1_ner(predFile, truthFile, strict=False, xpath = './document/passage/annotation'):
+    # 9 entities, and three scores for each entity: TP, FP, and FN
+    scores = np.zeros([9,3])
+    # load prediction
+    with open(predFile) as src:
+        pred = src.read()
+    # parse xml truth
+    tree = et.parse(anno)
+    annoList = tree.getroot().findall(xpath)
+    # count TP, FP, FN for all entities
+    for a in annoList:
+        # entity and its symbol
+        entity = a.find(TAG_ENTITY).text
+        # position
+        loc = a.find(TAG_LOC)
+        offset = int(loc.get(ATTR_OFF))
+        length = int(loc.get(ATTR_LEN))
+        if entity == PHI:
+            continue
+        # the corresponding symbol of an entity
+        e = ENTITY_DIC[entity]
+        result = eval_entity(pred, e, offset, length, strict)
+        scores[ENTITY_INDEX[e], result] += 1
+    return scores
+
+#
+def eval_entity(pred, entiy, offset, length, strict=False):
+    for i in range(offset, offset+length):
+        if pred[i].upper() != entity:
+            break
+    else:
+        if offset
+        del_entity(pred, offset, length)
+        return 0
+    
 
 def main():
     fileName = '__out__/result_timedis_bi_20e.txt'

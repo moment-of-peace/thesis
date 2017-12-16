@@ -181,6 +181,7 @@ def checkRestore(path1='__data__/MADE-1.0/entities', path2='__data__/MADE-1.0/re
     assert(len(flist) == 876)
     assert(len(flist2) == 876)
     
+    string = ''
     for f in flist:
         #print(f)
         with open(os.path.join(path1, f), 'rt') as src:
@@ -191,16 +192,16 @@ def checkRestore(path1='__data__/MADE-1.0/entities', path2='__data__/MADE-1.0/re
             corp = src.read()
         #assert(len(raw) == len(restore))
         if len(raw) != len(restore):
-            print(len(raw), len(restore))
+            print(f, 'length', len(raw), len(restore))
             exit()
+        
         for i in range(len(raw)):
             if raw[i].lower() != restore[i].lower():
-                print(f, i)
-                print(raw[i-15:i+15])
-                print(restore[i-15:i+15])
-                print(corp[i-15:i+15])
-                print('')
-                #exit()
+                string += '%s %d\n%s\n%s\n%s\n\n'%(f, i, raw[i-15:i+15], restore[i-15:i+15], util.del_linefeed(corp[i-15:i+15]))
+    if string != '':
+        with open('wrongs','wt') as fid:
+            fid.write(string)
+        print('wrongs')
     print('checks finished')
 
 def checkAll():
@@ -210,10 +211,10 @@ def checkAll():
     newPath = '__data__/MADE-1.0/restore'
     trainPath = '__data__/MADE-1.0/process_stepFour_corp'
     truthPath = '__data__/MADE-1.0/process_stepThree_entity'
+    '''
     with open(vocabPath, 'rb') as handle:   # load vocabulary from file
         vocab = pickle.load(handle)
     flist = os.listdir(truthPath)
-    '''
     trainx = getIndex(trainPath, flist, vocab)
     trainy = genResult(truthPath,flist)
     testData, testResult = genTrainDataset(trainx, trainy, windowSize, windowSize)
@@ -231,7 +232,8 @@ def main():
     if not os.path.exists(newPath):
         os.makedirs(newPath)
 
-    entityPath = 'restore-2' #'process_stepThree_entity'
+    entityPath = 'restore-2'
+    #entityPath = 'process_stepThree_entity'
     flist = os.listdir(os.path.join(path,entityPath))
     for f in flist:
         with open(os.path.join(path,entityPath,f)) as src:

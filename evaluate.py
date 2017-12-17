@@ -69,21 +69,24 @@ def all_f1_score(predPath='__data__/MADE-1.0/pred', truthPath='__data__/MADE-1.0
         scores += f1_ner(os.path.join(predPath, f), os.path.join(truthPath, f+'.bioc.xml'))
     # compute f1 scores for all entities
     f1_scores = []
-    for i in range(scores.shape[0])
-        prec = scores[i,0]/(scores[i,0]+scores[i,1]
-        rec = scores[i,0]/(scores[i,0]+scores[i,2]
+    for i in range(scores.shape[0]):
+        prec = scores[i,0]/(scores[i,0]+scores[i,1])
+        rec = scores[i,0]/(scores[i,0]+scores[i,2])
         f1_scores.append(2*prec*rec/(prec+rec))
     return f1_scores
     
-# strict or relaxed f1 score
+# strict or relaxed f1 score for one file
 def f1_ner(predFile, truthFile, strict=False, xpath = './document/passage/annotation'):
     # 9 entities, and three scores for each entity: TP, FP, and FN
     scores = np.zeros([9,3])
     # load prediction
     with open(predFile) as src:
         pred = src.read()
+    # avoid out of index
+    pred = 'X'+pred+'X'
+    pred = list(pred)
     # parse xml truth
-    tree = et.parse(anno)
+    tree = et.parse(truthFile)
     annoList = tree.getroot().findall(xpath)
     # count TP, FP, FN for all entities
     for a in annoList:
@@ -91,26 +94,96 @@ def f1_ner(predFile, truthFile, strict=False, xpath = './document/passage/annota
         entity = a.find(TAG_ENTITY).text
         # position
         loc = a.find(TAG_LOC)
-        offset = int(loc.get(ATTR_OFF))
+        offset = int(loc.get(ATTR_OFF))+1 # +1 due to pred = 'X' + pred + 'X'
         length = int(loc.get(ATTR_LEN))
-        if entity == PHI:
+        if entity == 'PHI':
             continue
         # the corresponding symbol of an entity
         e = ENTITY_DIC[entity]
         result = eval_entity(pred, e, offset, length, strict)
+        if result != 0:
+            print(entity, offset, length, pred[offset:offset+length])
+        del_entity(pred, e, offset, length)
         scores[ENTITY_INDEX[e], result] += 1
+    scores += find_FP(pred)
     return scores
 
-#
-def eval_entity(pred, entiy, offset, length, strict=False):
-    for i in range(offset, offset+length):
-        if pred[i].upper() != entity:
+# return 0: TP, 1:FP, 2:FN
+def eval_entity(pred, entity, offset, length, strict=False):
+    end = offset + length
+    flag1, flag2, flag3 = False, False, False
+    for i in range(offset, end):
+        if pred[i].upper() == entity:
+            flag1 = True
             break
+    for i in range(offset, end):
+        if pred[i].upper() != entity:
+            flag2 = True
+            break
+    if pred[offset-1].upper() != entity and pred[end].upper() != entity:
+        flag3 = True
+
+    if flag1:
+        if (flag3 and not flag2) or not strict:
+            return 0
+        else:
+            return 1
     else:
-        if offset
-        del_entity(pred, offset, length)
-        return 0
-    
+        return 2
+
+# write "X" at corresponding positions
+def del_entity(pred, entity, offset, length):
+    end = offset + length
+    for i in range(offset, end):
+        if pred[i].upper() == entity:
+            pred[i] = 'X'
+    index = offset-1
+    while pred[index].upper() == entity:
+        pred[index] = 'X'
+        index -= 1
+    index = end
+    while pred[index].upper() == entity:
+        pred[index] = 'X'
+        index += 1
+    return pred
+
+# find remained FP for all entities
+def find_FP(pred):
+    result = np.zeros([9,3])
+    flag = True
+    s = 'X'
+    for e in pred:
+        sym = e.upper()
+        if sym != 'X':
+            if flag or sym != s:
+                result[ENTITY_INDEX[sym],1] += 1
+                flag = False
+                s = sym
+        else:
+            flag = True
+    return result
+
+def tests():
+    pred = 'XxxaaaxxvvxxrrrarrrX'# a:3, b:8, c1:12, c2:16
+    pred = list(pred)
+    #entity = 'A'
+    #offset, length = 3, 3
+    # eval_entity(pred, entity, offset, length, strict=False)
+    assert(eval_entity(pred,'A',3,2,strict=True)==1)
+    assert(eval_entity(pred,'A',3,4,strict=True)==1)
+    assert(eval_entity(pred,'A',3,3,strict=True)==0)
+    assert(eval_entity(pred,'A',6,4,strict=True)==2)
+    assert(eval_entity(pred,'A',3,2)==0)
+    assert(eval_entity(pred,'A',3,3)==0)
+    assert(eval_entity(pred,'A',3,4)==0)
+    assert(eval_entity(pred,'A',6,4)==2)
+    # del_entity(pred, entity, offset, length)
+    predCopy = pred[:]
+    assert(''.join(del_entity(predCopy, 'R', 14, 1))=='XxxaaaxxvvxxXXXarrrX')
+    predCopy = pred[:]
+    assert(''.join(del_entity(predCopy, 'R', 14, 2))=='XxxaaaxxvvxxXXXaXXXX')
+    # find_FP(pred)
+    r = find_FP(list(pred))
 
 def main():
     fileName = '__out__/result_timedis_bi_20e.txt'
@@ -127,4 +200,5 @@ def main():
     f1_eval(fileName, labels)
 
 if __name__ == '__main__':
-    main()
+    tests()
+    #main()

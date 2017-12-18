@@ -73,6 +73,13 @@ def all_f1_score(predPath='__data__/MADE-1.0/pred', truthPath='__data__/MADE-1.0
         prec = scores[i,0]/(scores[i,0]+scores[i,1])
         rec = scores[i,0]/(scores[i,0]+scores[i,2])
         f1_scores.append(2*prec*rec/(prec+rec))
+    # all f1 score
+    a = sum(scores[:,0])
+    b = sum(scores[:,1])
+    c = sum(scores[:,2])
+    prec = a/(a+b)
+    rec = a/(a+c)
+    f1_scores.append(2*prec*rec/(prec+rec))
     return f1_scores
     
 # strict or relaxed f1 score for one file

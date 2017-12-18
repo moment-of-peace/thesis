@@ -61,12 +61,12 @@ def f1_eval(fileName, labels):
     print('macro f1 score:', f1_score(tru, pre, labels=labels, average='macro'))
 
 # strict or relaxed f1 score
-def all_f1_score(predPath='__data__/MADE-1.0/pred', truthPath='__data__/MADE-1.0/annotations'):
+def all_f1_score(predPath='__data__/MADE-1.0/pred', truthPath='__data__/MADE-1.0/annotations', strict=False):
     # 9 entities, and 3 scores: TP, FP, and FN
     scores = np.zeros([9,3])
     flist = os.listdir(predPath)
     for f in flist:
-        scores += f1_ner(os.path.join(predPath, f), os.path.join(truthPath, f+'.bioc.xml'))
+        scores += f1_ner(os.path.join(predPath, f), os.path.join(truthPath, f+'.bioc.xml'), strict=strict)
     # compute f1 scores for all entities
     f1_scores = []
     for i in range(scores.shape[0]):

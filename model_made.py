@@ -18,7 +18,7 @@ def trainModel(trainData, trainResult, embedModel, epoch):
     model.add(kl.Embedding(embedModel.shape[0],embedModel.shape[1], mask_zero=True,weights=[embedModel]))
     model.add(kl.Bidirectional(kl.LSTM(20,activation='relu',return_sequences=True)))
     model.add(kl.Bidirectional(kl.LSTM(20, return_sequences=True)))
-    model.add(kl.TimeDistributed(kl.Dense(10)))
+    model.add(kl.TimeDistributed(kl.Dense(19)))
     model.compile(loss='mean_squared_error', optimizer='adam')
     model.fit(trainData, trainResult, epochs=epoch, batch_size=100, verbose=2)
     return model
@@ -96,7 +96,7 @@ def main():
     pred, tru = evalModel(predict, np.array(testResult), shiftSize, shift, epoch)
 
     #restore
-    gen.restore(flist[0:shiftsize], pred)
+    #gen.restore(flist[0:shiftSize], pred)
 
 if __name__ == '__main__':
     main()

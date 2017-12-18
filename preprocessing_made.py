@@ -85,9 +85,6 @@ def toTokenEntities(corpPath, annoPath, xpath = './document/passage/annotation',
 
 # preprocessing for corpus and annotations
 def preprocesses(corpPath, entityPath, steps, newPath='__data__/MADE-1.0/process'):
-    if not os.path.exists(newPath):
-        os.makedirs(newPath)
-    
     flist = os.listdir(corpPath)
     for f in flist:
         print(f)
@@ -156,6 +153,7 @@ def stepTwo(corp, entity):
     pre = 0 # 0: space, 1: letter, 2: number, 3: other
     while i < len(corp)-1:
         cur = represent(corp[i])
+        
         if pre != 0 and cur != 0 and pre != cur:
             # words such as "a.m." should not be split
             if corp[i] == '.' and corp[i-1].isalpha() and corp[i+1].isalpha():
@@ -168,10 +166,17 @@ def stepTwo(corp, entity):
                 c.append(' ')
                 e.append(' ')
                 trace.append((i-1, 1))
-        elif (corp[i] == '.' or corp[i] == ',') and pre != 0:
+        elif pre != 0 and (corp[i] == '.' or corp[i] == ',' or corp[i] == ';' or corp[i] == ')'):
             c.append(' ')
             e.append(' ')
             trace.append((i-1, 1))
+        '''
+        if pre != 0:
+            if (cur != 0 and pre != cur) or cur == 3:
+                c.append(' ')
+                e.append(' ')
+                trace.append((i-1, 1))
+        '''
         c.append(corp[i])
         e.append(entity[i])
         pre = cur
@@ -264,15 +269,15 @@ def checkCorpEnti(corpPath, entityPath, flag):
 def main():
     P = '__data__/MADE-1.0/'
     
-    toTokenEntities(P+'corpus', P+'annotations', newPath='tempentity')
-    #preprocesses(P+'corpus', P+'entities', [1,2,3,4])
-    '''
+    toTokenEntities(P+'corpus', P+'annotations')
+    preprocesses(P+'corpus', P+'entities', [1,2,3,4])
+    
     checkCorpEnti(P+'corpus', P+'entities', False)
     checkCorpEnti(P+'process_stepOne_corp', P+'process_stepOne_entity', True)
     checkCorpEnti(P+'process_stepTwo_corp', P+'process_stepTwo_entity', True)
     checkCorpEnti(P+'process_stepThree_corp', P+'process_stepThree_entity', True)
     checkCorpEnti(P+'process_stepFour_corp', P+'process_stepThree_entity', True)
-    '''
+    
     
 if __name__ == '__main__':
     main()

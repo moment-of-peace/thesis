@@ -104,9 +104,11 @@ def del_linefeed(string, chara=' '):
         else:
             result += c
     return result
-    
+
 if __name__ == '__main__':
-    #join_files('__data__/MADE-1.0/process_stepFour_corp', separator=' . ')
+    join_files('__data__/MADE-1.0/process_stepFour_corp', separator=' . ')
+    '''
     gen_weights_vocab('__data__/word2vec_model_made_6000.txt', name='_made_6000')
     gen_weights_vocab('__data__/word2vec_model_made_8000.txt', name='_made_8000')
     gen_weights_vocab('__data__/word2vec_model_made_10000.txt', name='_made_10000')
+    '''

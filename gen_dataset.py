@@ -3,6 +3,40 @@ import pickle
 import numpy as np
 import my_utils as util
 
+'''
+entityDict = {'a':[1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+              'i':[0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+              's':[0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+              'v':[0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+              'd':[0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+              'o':[0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+              'r':[0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+              'f':[0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+              'u':[0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+              'x':[0, 0, 0, 0, 0, 0, 0, 0, 0, 1]}
+'''
+entityDict = {'A':[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+              'a':[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+              'I':[0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+              'i':[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+              'S':[0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+              's':[0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+              'V':[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+              'v':[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+              'D':[0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+              'd':[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+              'O':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+              'o':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+              'R':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+              'r':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+              'F':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+              'f':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+              'U':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+              'u':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+              'X':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]}
+
+# reversedDict = {0:'a', 1:'i', 2:'s', 3:'v', 4:'d', 5:'o', 6:'r', 7:'f', 8:'u', 9:'X'}
+reversedDict = {0:'A',1:'a',2:'I',3:'i',4:'S',5:'s',6:'V',7:'v',8:'D',9:'d',10:'O',11:'o',12:'R',13:'r',14:'F',15:'f',16:'U',17:'u',18:'X'}
 # convert words in files into index, return a list of different length lists
 def getIndex(path, filelist, vocab):
     data = []
@@ -24,23 +58,18 @@ def indexFile(src, vocab):
 # return a list ("results") of lists, and each nested list ("entities") is a list of entity vectors
 def genResult(path, flist):
     # map entities to vectors
-    entityDict = {'a':[1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  'i':[0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-                  's':[0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-                  'v':[0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-                  'd':[0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                  'o':[0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                  'r':[0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-                  'f':[0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-                  'u':[0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-                  'x':[0, 0, 0, 0, 0, 0, 0, 0, 0, 1]}
     results = []
     for f in flist:
         entities = []
         with open(os.path.join(path, f), 'rt') as src:
             content = src.read().split(' ')
         for word in content:
-            entities.append(entityDict[word[0].lower()])
+            try:
+                entities.append(entityDict[word[0]])
+            except:
+                print(f, word)
+                exit()
+            #entities.append(entityDict[word[0].lower()])
         results.append(entities)
     return results
 
@@ -50,7 +79,7 @@ def genTrainDataset(trainx, trainy, windowsize, step):
     result = []
     for i in range(0, len(trainx)):
         data.extend(window(trainx[i],windowsize,step,0)) # 0 or 1 ?
-        result.extend(window(trainy[i],windowsize,step,[0, 0, 0, 0, 0, 0, 0, 0, 0, 1]))
+        result.extend(window(trainy[i],windowsize,step,entityDict['X']))
     return data, result 
 def window(data, windowsize, step, padding):
     result = []
@@ -75,7 +104,6 @@ def restore(flist, predict, windowSize=20, path='__data__/MADE-1.0/', newPath='_
     if not os.path.exists(newPath):
         os.makedirs(newPath)
 
-    reversedDict = {0:'a', 1:'i', 2:'s', 3:'v', 4:'d', 5:'o', 6:'r', 7:'f', 8:'u', 9:'X'}
     index = 0
     for f in flist:
         with open(os.path.join(path,'process_stepThree_entity',f)) as src:
@@ -87,11 +115,11 @@ def restore(flist, predict, windowSize=20, path='__data__/MADE-1.0/', newPath='_
             index += 1
         # three steps of restoring
         entity = entity[:-1]
-        '''
+        
         entity = reverseStepOne(entity, os.path.join(path, 'process_stepThree_trace'), f)
         entity = reverseStepTwo(entity, os.path.join(path, 'process_stepTwo_trace'), f)
         entity = reverseStepThree(entity, os.path.join(path, 'process_stepOne_trace'), f)
-        '''
+        
         with open(os.path.join(newPath, f), 'wt') as tar:
             tar.write(entity)
 
@@ -240,17 +268,29 @@ def main():
             entity = src.read()
         
         # three steps of restoring
-        #entity = reverseStepOne(entity, os.path.join(path, 'process_stepThree_trace'), f)
-        #entity = reverseStepTwo(entity, os.path.join(path, 'process_stepTwo_trace'), f)
+        entity = reverseStepOne(entity, os.path.join(path, 'process_stepThree_trace'), f)
+        entity = reverseStepTwo(entity, os.path.join(path, 'process_stepTwo_trace'), f)
         entity = reverseStepThree(entity, os.path.join(path, 'process_stepOne_trace'), f)
         with open(os.path.join(newPath, f), 'wt') as tar:
             tar.write(entity)
     
     checkRestore(os.path.join(path, 'entities'), newPath)
 
+def cmp_file(x):
+    c = x.split('_')
+    return int(c[0]) * 100000 + int(c[1])
+
 if __name__ == '__main__':
-    checkAll()
+    #checkAll()
     #main()
+    path = '__data__/MADE-1.0/corpus'
+    flist = util.sorted_file_list(path, cmp_file)
+    results = []
+    with open('joint.txt') as f:
+        for line in f:
+            results.append(int(line.strip('\n').split(' ')[1]))
+    restore(flist, results, windowSize=20, path='__data__/MADE-1.0/', newPath='__data__/MADE-1.0/pred1218')
+            
     '''
     path = '__data__/MADE-1.0/'
     newPath = '__data__/MADE-1.0/restore'

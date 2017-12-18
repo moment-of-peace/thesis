@@ -33,6 +33,8 @@ for e in c:
     s.add(e)
 print(len(s))
 '''
+
+'''
 corpPath = '__data__/MADE-1.0/corpus'
 entityPath = '__data__/MADE-1.0/entities'
 flist = os.listdir(corpPath)
@@ -49,4 +51,14 @@ for f in flist:
         if corp[i]=='\n' and entity[i].lower() != 'x' and entity[i-1].lower() != entity[i+1].lower():# and (entity[i-1].lower() != 'x' or entity[i+1].lower() != 'x'):
             print(f, i, entity[i-1], entity[i], entity[i+1])
         i += 1
-            
+'''
+
+path = 'results/made-uppercase'
+for i in range(10):
+    f = 'result_90_%d_10.txt'%(i)
+    print(f)
+    with open(os.path.join(path, f), 'rt') as src:
+        content = src.read()
+    with open('joint.txt', 'at') as tar:
+        tar.write(content)
+

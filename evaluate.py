@@ -101,8 +101,10 @@ def f1_ner(predFile, truthFile, strict=False, xpath = './document/passage/annota
         # the corresponding symbol of an entity
         e = ENTITY_DIC[entity]
         result = eval_entity(pred, e, offset, length, strict)
+        '''
         if result != 0:
             print(entity, offset, length, pred[offset:offset+length])
+        '''
         del_entity(pred, e, offset, length)
         scores[ENTITY_INDEX[e], result] += 1
     scores += find_FP(pred)

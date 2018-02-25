@@ -92,6 +92,7 @@ def main():
     testData, testResult = gen.genTrainDataset(trainx[0:shiftSize], trainy[0:shiftSize], windowSize, windowSize)
     # train, predict, and evaluate
     model = trainModel(trainData, trainResult, embedModel, epoch)
+    model.save('model_made_%d-%d_%d-epoch.h5'%(shiftSize, shift, epoch))
     predict = model.predict(testData)
     pred, tru = evalModel(predict, np.array(testResult), shiftSize, shift, epoch)
 

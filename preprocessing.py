@@ -12,29 +12,6 @@ def load_model(modelFile):
 def loadW2VModel(modelFile):
     return gensim.models.KeyedVectors.load_word2vec_format(modelFile, binary=False)
 
-def gen_embed_model(modelFile):
-    vocab = {}  # {'word': index, ...}
-    with open(modelFile,'r') as f:
-        line = f.readline()
-        [length, dim] = line.split(' ')
-        vec = np.zeros((int(length)+1, int(dim)), dtype = np.float64)    # {index: [vector], ...}
-        line = f.readline()
-        i = 1
-        while line != '':
-            index = line.find(' ')
-            word = line[:index]
-            vector = []
-            for e in line[index+1:].split(' '):
-                try:
-                    vector.append(float(e))
-                except Exception:
-                    print('float' + e)
-            vocab[word] = i
-            vec[i] = np.array(vector)
-            line = f.readline()
-            i = i+1
-    return [vocab, vec]
-
 # find common files in two directories and sort by name
 def sortedCommonFiles(path1, path2):
     flist = commonFiles(path1, path2)

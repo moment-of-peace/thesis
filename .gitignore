@@ -2,6 +2,9 @@
 *.npy
 *.pkl
 
+# model file
+*.h5
+
 # dataset files
 *.zip
 *.ZIP

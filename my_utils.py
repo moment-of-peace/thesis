@@ -67,8 +67,8 @@ def join_files(path, fileName='joint_file.txt', separator=''):
             tar.write(sep + content)
         sep = separator
 
-# generate weights and vocabulary for word embedding      
-def gen_weights_vocab(modelFile, name=''):
+# generate vocabulary (a dict) and weights (2D np array) from a gensim style embedding file
+def gen_weights_vocab(modelFile, name='', saveFlag=True):
     vocab = {}  # dict {'word': index, ...}
     with open(modelFile,'r') as f:
         line = f.readline()
@@ -89,10 +89,11 @@ def gen_weights_vocab(modelFile, name=''):
             weights[i] = np.array(vector)
             line = f.readline()
             i = i+1
-    # write into files
-    np.save('weights%s.npy'%(name), weights)
-    with open('vocab%s.pkl'%(name), 'wb') as handle:
-        pickle.dump(vocab, handle)
+    if saveFlag:
+        # write into files
+        np.save('weights_%s_%d.npy'%(name, len(vocab)), weights)
+        with open('vocab_%s_%d.pkl'%(name, len(vocab)), 'wb') as handle:
+            pickle.dump(vocab, handle)
     return vocab, weights
 
 # replace line feed

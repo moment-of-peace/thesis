@@ -122,7 +122,7 @@ def toTokenEntities(corpPath, annoPath, xpath = './document/passage/annotation',
     for f in flist:
         parseFile(os.path.join(corpPath, f), os.path.join(annoPath, f+'.bioc.xml'), os.path.join(newPath, f), xpath)
 
-def toBinEntities(corpPath, annoPath, xpath = './document/passage/annotation', newPath='__data__/MADE-1.0/bin-entities'):
+def toBinEntities(corpPath, annoPath, xpath = './document/passage/annotation', newPath='__data__/MADE-1.0/entities2'):
     if not os.path.exists(newPath):
         os.makedirs(newPath)
     
@@ -153,10 +153,17 @@ def preprocesses(corpPath, entityPath, steps, spaceChar, newPath='__data__/MADE-
             corp = stepFour(corp, f, newPath)
 
 # delete some comas and dots, to lower case, replace \n \t with spaces
-def processStep(corp, entity, stepFunc, fileName, spaceChar, newPath='__data__/MADE-1.0/process'):
+def processStep(corp, entityTemp, stepFunc, fileName, spaceChar, newPath='__data__/MADE-1.0/process'):
+    path = os.path.join('%s_%s_entity'%(newPath,stepFunc.__name__))
+    if not os.path.exists(path):
+        os.makedirs(path)
     # avoid index out of range
     corp = ' ' + corp + ' '
-    entity = ' ' + entity + ' '
+    if spaceChar == 0:
+        entity = np.zeros(len(entityTemp) + 2)
+        entity[1:-1] = entityTemp[:]
+    else:
+        entity = ' ' + entity + ' '
 
     c, e, trace = stepFunc(corp, entity, spaceChar)
     newCorp = ''.join(c)
@@ -309,11 +316,11 @@ def checkCorpEnti(corpPath, entityPath, flag, spaceChar):
     assert(len(flist2) == 876)
     
     for f in flist:
-        print(f)
+        #print(f)
         with open(os.path.join(corpPath, f), 'rt') as src:
             corp = src.read()
         if spaceChar == 0:
-            entity = np.load(os.path.join(entityPath, f))
+            entity = np.load(os.path.join(entityPath, f+'.npy'))
         else:
             with open(os.path.join(entityPath, f), 'rt') as src:
                 entity = src.read()
@@ -332,14 +339,14 @@ def main():
     P = '__data__/MADE-1.0/'
     spaceChar = 0
     
-    toTokenEntities(P+'corpus', P+'annotations')
-    preprocesses(P+'corpus', P+'entities', [1,2,3,4], spaceChar, newPath='__data__/MADE-1.0/process2')
+    #toBinEntities(P+'corpus', P+'annotations')
+    #preprocesses(P+'corpus', P+'entities2', [1,2,3,4], spaceChar, newPath='__data__/MADE-1.0/process2')
     
-    checkCorpEnti(P+'corpus2', P+'entities', True, spaceChar)
-    checkCorpEnti(P+'process_stepOne_corp', P+'process_stepOne_entity', True, spaceChar)
-    checkCorpEnti(P+'process_stepTwo_corp', P+'process_stepTwo_entity', True, spaceChar)
-    checkCorpEnti(P+'process_stepThree_corp', P+'process_stepThree_entity', True, spaceChar)
-    checkCorpEnti(P+'process_stepFour_corp', P+'process_stepThree_entity', True, spaceChar)
+    checkCorpEnti(P+'corpus', P+'entities2', False, spaceChar)
+    checkCorpEnti(P+'process2_stepOne_corp', P+'process2_stepOne_entity', True, spaceChar)
+    checkCorpEnti(P+'process2_stepTwo_corp', P+'process2_stepTwo_entity', True, spaceChar)
+    checkCorpEnti(P+'process2_stepThree_corp', P+'process2_stepThree_entity', True, spaceChar)
+    checkCorpEnti(P+'process2_stepFour_corp', P+'process2_stepThree_entity', True, spaceChar)
     
     
 if __name__ == '__main__':

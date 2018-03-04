@@ -1,6 +1,29 @@
 import os
 import my_utils as util
+import keras.models as km
+import gen_dataset as gen
+import numpy as np
+import pickle
 
+entityIndex= {0:'B-ADE',
+              1:'I-ADE',
+              2:'B-Indication',
+              3:'I-Indication',
+              4:'B-SSLIF',
+              5:'I-SSLIF',
+              6:'B-Severity',
+              7:'I-Severity',
+              8:'B-Drugname',
+              9:'I-Drugname',
+              10:'B-Dosage',
+              11:'I-Dosage',
+              12:'B-Route',
+              13:'I-Route',
+              14:'B-Frequency',
+              15:'I-Frequency',
+              16:'B-Duration',
+              17:'I-Duration',
+              18:'O'}
 entityDict = {'A':'B-ADE',
               'a':'I-ADE',
               'I':'B-Indication',
@@ -85,5 +108,100 @@ def test_conll():
     print(corp)
     print(result)
 
+def cmp_file(x):
+    c = x.split('_')
+    return int(c[0]) * 100000 + int(c[1])
+    
+# get the prediction and truth
+def gen_pred_tru(modelFile, shiftSize, shift, multi):
+    if multi:
+        trainPath = '__data__/MADE-1.0/process2_stepFour_corp'
+        truthPath = '__data__/MADE-1.0/process2_stepThree_entity'
+    else:
+        trainPath = '__data__/MADE-1.0/process_stepFour_corp'
+        truthPath = '__data__/MADE-1.0/process_stepThree_entity'
+    # cross validation
+    flist = util.sorted_file_list(trainPath, cmp_file)
+    flist = gen.cycleShift(flist, shift, shiftSize)
+    vocabPath = 'vocab_made_8000.pkl'
+    with open(vocabPath, 'rb') as handle:   # load vocabulary from file
+        vocab = pickle.load(handle)
+    # generate x and y
+    trainx = gen.getIndex(trainPath, flist, vocab)
+    if multi:
+        trainy = gen.genResultBin(truthPath, flist)
+    else:
+        trainy = gen.genResult(truthPath,flist)
+    '''
+    for i in range(len(trainy)):
+        for j in range(len(trainy[i])):
+            try:
+                index = trainy[i][j].index(1)
+            except Exception:
+                print(Exception)
+                print(flist[i],j)
+                exit()
+    '''
+    testData, testResult = gen.genTrainDataset(trainx[0:shiftSize], trainy[0:shiftSize], 20, 20, multi=multi)
+    
+    model = km.load_model(modelFile)
+    predict = model.predict(np.array(testData))
+    return flist[0:shiftSize], predict, testResult
+    
+# determine whether the token has multiple lables
+def is_multi(entity):
+    index1 = entity.index(1)
+    try:
+        index2 = entity.index(1, index1+1)
+    except ValueError:
+        return False
+    return True
+    
+# to investigate 
+def print_multi(predict, truth):
+    f = open('multi', 'wt')
+    for i in range(1000):
+        for j in range(len(truth[i])):
+            #if is_multi(truth[i][j]):
+            f.write(str(predict[i][j])+'\n')
+            f.write(str(truth[i][j])+'\n\n')
+    f.close()
+
 if __name__ == '__main__':
-    test_conll()
+    flist, pre, tru = gen_pred_tru('model_made_90-0_36-epoch.h5', 90, 0)
+    print_multi(pre,tru)
+    '''
+    corpPath = '__data__/MADE-1.0/process_stepFour_corp'
+    with open('con_output', 'wt') as tar:
+        i = 0
+        for f in flist:
+            spaces = []
+            with open(os.path.join(corpPath, f)) as src:
+                content = src.read()
+                # find positions of spaces
+                for m in range(len(content)):
+                    if content[m] == ' ':
+                        spaces.append(m)
+                text = content.split(' ')
+            length = len(text)
+            j = 0
+            start = 0
+            while True:
+                for k in range(20):
+                    #index = j*20 + k
+                    predict = entityIndex[util.maxIndex(pre[i][k])]
+                    truth = entityIndex[tru[i][k].index(1)]
+                    word = text[j]
+                    tar.write('%s valid_text_00000 %d %d %s %s %s\n'%(word, start, start+len(word), f, truth, predict))
+                    if text[j] == '.':
+                        tar.write('\n')
+                    j += 1
+                    if (j) >= length:
+                        break
+                    start = spaces[j-1]+1
+                i += 1
+                if j >= length:
+                    break
+            if text[-1] != '.':
+                tar.write('\n')
+    '''

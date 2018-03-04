@@ -52,8 +52,8 @@ def main():
     shiftSize = 90
     weightsPath = 'weights_made_8000.npy'
     vocabPath = 'vocab_made_8000.pkl'
-    trainPath = '__data__/MADE-1.0/process_stepFour_corp'
-    truthPath = '__data__/MADE-1.0/process_stepThree_entity'
+    trainPath = '__data__/MADE-1.0/process2_stepFour_corp'
+    truthPath = '__data__/MADE-1.0/process2_stepThree_entity'
     windowSize = 20
     epoch = 30
 
@@ -86,14 +86,15 @@ def main():
     flist = gen.cycleShift(flist, shift, shiftSize)
     # generate x and y
     trainx = gen.getIndex(trainPath, flist, vocab)
-    trainy = gen.genResult(truthPath,flist)
+    #trainy = gen.genResult(truthPath,flist)
+    trainy = gen.genResultBin(truthPath, flist)
     # split data for training and testing respectively
     trainData,trainResult = gen.genTrainDataset(trainx[shiftSize:], trainy[shiftSize:], windowSize, 10)
     testData, testResult = gen.genTrainDataset(trainx[0:shiftSize], trainy[0:shiftSize], windowSize, windowSize)
     # train, predict, and evaluate
-    model = trainModel(trainData, trainResult, embedModel, epoch)
+    model = trainModel(np.array(trainData), np.array(trainResult), embedModel, epoch)
     model.save('model_made_%d-%d_%d-epoch.h5'%(shiftSize, shift, epoch))
-    predict = model.predict(testData)
+    predict = model.predict(np.array(testData))
     pred, tru = evalModel(predict, np.array(testResult), shiftSize, shift, epoch)
 
     #restore

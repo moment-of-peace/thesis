@@ -72,14 +72,34 @@ def genResult(path, flist):
             #entities.append(entityDict[word[0].lower()])
         results.append(entities)
     return results
+def genResultBin(path, flist):
+    results = []
+    for f in flist:
+        entities = []
+        c = np.load(os.path.join(path, f+'.npy'))
+        entities.append(numToBin(c[0]))
+        for i in range(1,len(c)):
+            if c[i] == 0: #split spaces
+                entities.append(numToBin(c[i+1]))
+        results.append(entities)
+    return results
+def numToBin(num):
+    result = []
+    for i in range(19):
+        result.append(num&1)
+        num = num >> 1
+    return result
 
 # use window method to cut datasets for training
-def genTrainDataset(trainx, trainy, windowsize, step):
+def genTrainDataset(trainx, trainy, windowsize, step, multi=False):
     data = []
     result = []
     for i in range(0, len(trainx)):
         data.extend(window(trainx[i],windowsize,step,0)) # 0 or 1 ?
-        result.extend(window(trainy[i],windowsize,step,entityDict['X']))
+        if multi:
+            result.extend(window(trainy[i],windowsize,step,entityDict['A']))
+        else:
+            result.extend(window(trainy[i],windowsize,step,entityDict['X']))
     return data, result 
 def window(data, windowsize, step, padding):
     result = []

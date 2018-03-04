@@ -1,11 +1,13 @@
 import os
+import sys
 import my_utils as util
 import keras.models as km
 import gen_dataset as gen
 import numpy as np
 import pickle
 
-entityIndex= {0:'B-ADE',
+OTHER = 'O'
+entityIndex0={0:'B-ADE',
               1:'I-ADE',
               2:'B-Indication',
               3:'I-Indication',
@@ -24,6 +26,9 @@ entityIndex= {0:'B-ADE',
               16:'B-Duration',
               17:'I-Duration',
               18:'O'}
+#entityIndex = {(k+1)%19:v for k,v in entityIndex0.items()}
+entityIndex = entityIndex0
+
 entityDict = {'A':'B-ADE',
               'a':'I-ADE',
               'I':'B-Indication',
@@ -167,11 +172,44 @@ def print_multi(predict, truth):
             f.write(str(truth[i][j])+'\n\n')
     f.close()
 
-if __name__ == '__main__':
-    flist, pre, tru = gen_pred_tru('model_made_90-0_36-epoch.h5', 90, 0)
-    print_multi(pre,tru)
-    '''
-    corpPath = '__data__/MADE-1.0/process_stepFour_corp'
+def findIndex(array, coeff=1, thres=None):
+    indexs = []
+    if thres == None:
+        thres = np.amax(array) * coeff
+    for i in range(len(array)):
+        if array[i] >= thres:
+            indexs.append(i)
+    return indexs
+
+# process a token
+def conll_formatter(word, start, fname, pred, tru, coeff):
+    prediction = findIndex(pred, coeff=coeff)
+    truth = findIndex(tru, thres=1)
+    if len(prediction) == 1 and len(truth) == 1:
+        # the token only has one label
+        return '%s valid_text_00000 %d %d %s %s %s\n'%(word, start, start+len(word), fname, \
+entityIndex[truth[0]], entityIndex[prediction[0]])
+
+    result = ''
+    inf = float('inf')
+    prediction.append(inf)
+    truth.append(inf)
+    i, j = iter(prediction), iter(truth)
+    p, t = next(i), next(j)
+    while p != inf or t != inf:
+        if p == t:
+            result += '%s valid_text_00000 %d %d %s %s %s\n'%(word, start, start+len(word), fname, entityIndex[t], entityIndex[t])
+            p, t = next(i), next(j)
+        elif p < t:
+            result += '%s valid_text_00000 %d %d %s %s %s\n'%(word, start, start+len(word), fname, OTHER, entityIndex[p])
+            p = next(i)
+        else:
+            result += '%s valid_text_00000 %d %d %s %s %s\n'%(word, start, start+len(word), fname, entityIndex[t], OTHER)
+            t = next(j)
+    return result
+
+# generate a conll style output file
+def conll_output(flist, corpPath, pred, tru, coeff):
     with open('con_output', 'wt') as tar:
         i = 0
         for f in flist:
@@ -188,15 +226,11 @@ if __name__ == '__main__':
             start = 0
             while True:
                 for k in range(20):
-                    #index = j*20 + k
-                    predict = entityIndex[util.maxIndex(pre[i][k])]
-                    truth = entityIndex[tru[i][k].index(1)]
-                    word = text[j]
-                    tar.write('%s valid_text_00000 %d %d %s %s %s\n'%(word, start, start+len(word), f, truth, predict))
+                    tar.write(conll_formatter(text[j], start, f, pred[i][k], tru[i][k], coeff))
                     if text[j] == '.':
                         tar.write('\n')
                     j += 1
-                    if (j) >= length:
+                    if j >= length:
                         break
                     start = spaces[j-1]+1
                 i += 1
@@ -204,4 +238,14 @@ if __name__ == '__main__':
                     break
             if text[-1] != '.':
                 tar.write('\n')
-    '''
+
+if __name__ == '__main__':
+    multi = False
+    coeff = 0.9
+    modelFile = 'model_made_90-%s_%s-epoch.h5'%(sys.argv[2], sys.argv[1])
+    print(modelFile)
+    flist, pred, tru = gen_pred_tru(modelFile, 90, int(sys.argv[2]), multi)
+    #print_multi(pred,tru)
+    corpPath = '__data__/MADE-1.0/process_stepFour_corp'
+    conll_output(flist, corpPath, pred, tru, coeff)
+    

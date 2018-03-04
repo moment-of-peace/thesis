@@ -1,0 +1,82 @@
+# not apply multiple labels
+processed 108774 tokens with 11221 phrases; found: 11455 phrases; correct: 9519.
+accuracy:  95.70%; precision:  83.10%; recall:  84.83%; FB1:  83.96
+              ADE: precision:  67.75%; recall:  71.23%; FB1:  69.45  307
+           Dosage: precision:  88.45%; recall:  88.18%; FB1:  88.32  987
+         Drugname: precision:  94.07%; recall:  94.80%; FB1:  94.43  2460
+         Duration: precision:  88.89%; recall:  80.37%; FB1:  84.41  198
+        Frequency: precision:  83.28%; recall:  86.28%; FB1:  84.75  891
+       Indication: precision:  49.90%; recall:  55.66%; FB1:  52.62  493
+            Route: precision:  94.98%; recall:  94.98%; FB1:  94.98  279
+            SSLIF: precision:  80.08%; recall:  82.43%; FB1:  81.24  5210
+         Severity: precision:  83.02%; recall:  82.10%; FB1:  82.56  630
+processed 112549 tokens with 11192 phrases; found: 11368 phrases; correct: 9133.
+accuracy:  95.26%; precision:  80.34%; recall:  81.60%; FB1:  80.97
+              ADE: precision:  57.53%; recall:  58.43%; FB1:  57.98  259
+           Dosage: precision:  86.43%; recall:  87.22%; FB1:  86.82  892
+         Drugname: precision:  94.17%; recall:  92.43%; FB1:  93.29  2348
+         Duration: precision:  75.25%; recall:  72.38%; FB1:  73.79  202
+        Frequency: precision:  81.91%; recall:  84.95%; FB1:  83.40  868
+       Indication: precision:  50.60%; recall:  52.25%; FB1:  51.41  504
+            Route: precision:  88.24%; recall:  90.78%; FB1:  89.49  357
+            SSLIF: precision:  76.58%; recall:  79.71%; FB1:  78.11  5329
+         Severity: precision:  80.13%; recall:  74.05%; FB1:  76.97  609
+run.sh: line 6: con_output2: No such file or directory
+run.sh: line 6: con_output3: No such file or directory
+run.sh: line 6: con_output4: No such file or directory
+processed 77912 tokens with 6684 phrases; found: 6815 phrases; correct: 5107.
+accuracy:  94.96%; precision:  74.94%; recall:  76.41%; FB1:  75.66
+              ADE: precision:  39.22%; recall:  18.02%; FB1:  24.69  51
+           Dosage: precision:  68.79%; recall:  74.67%; FB1:  71.61  737
+         Drugname: precision:  86.36%; recall:  80.75%; FB1:  83.46  1554
+         Duration: precision:  58.21%; recall:  48.75%; FB1:  53.06  67
+        Frequency: precision:  82.01%; recall:  84.44%; FB1:  83.21  556
+       Indication: precision:  51.97%; recall:  56.92%; FB1:  54.33  483
+            Route: precision:  85.98%; recall:  88.59%; FB1:  87.27  271
+            SSLIF: precision:  73.34%; recall:  78.48%; FB1:  75.82  2933
+         Severity: precision:  66.26%; recall:  64.67%; FB1:  65.45  163
+processed 68706 tokens with 5205 phrases; found: 5520 phrases; correct: 4021.
+accuracy:  94.85%; precision:  72.84%; recall:  77.25%; FB1:  74.98
+              ADE: precision:  32.31%; recall:  26.92%; FB1:  29.37  65
+           Dosage: precision:  81.25%; recall:  78.68%; FB1:  79.95  368
+         Drugname: precision:  91.31%; recall:  88.26%; FB1:  89.76  955
+         Duration: precision:  55.00%; recall:  50.00%; FB1:  52.38  40
+        Frequency: precision:  79.64%; recall:  84.44%; FB1:  81.97  334
+       Indication: precision:  43.20%; recall:  54.28%; FB1:  48.11  338
+            Route: precision:  80.10%; recall:  84.07%; FB1:  82.04  191
+            SSLIF: precision:  70.56%; recall:  76.84%; FB1:  73.57  2962
+         Severity: precision:  56.93%; recall:  66.38%; FB1:  61.29  267
+processed 83593 tokens with 6365 phrases; found: 6782 phrases; correct: 4861.
+accuracy:  94.92%; precision:  71.68%; recall:  76.37%; FB1:  73.95
+              ADE: precision:  42.18%; recall:  50.00%; FB1:  45.76  147
+           Dosage: precision:  78.37%; recall:  80.89%; FB1:  79.61  578
+         Drugname: precision:  86.62%; recall:  88.27%; FB1:  87.44  1173
+         Duration: precision:  54.90%; recall:  60.87%; FB1:  57.73  51
+        Frequency: precision:  83.58%; recall:  82.38%; FB1:  82.97  481
+       Indication: precision:  49.35%; recall:  49.35%; FB1:  49.35  308
+            Route: precision:  93.27%; recall:  89.40%; FB1:  91.29  208
+            SSLIF: precision:  67.06%; recall:  74.54%; FB1:  70.60  3318
+         Severity: precision:  63.51%; recall:  67.70%; FB1:  65.54  518
+processed 82210 tokens with 6223 phrases; found: 6286 phrases; correct: 4454.
+accuracy:  94.54%; precision:  70.86%; recall:  71.57%; FB1:  71.21
+              ADE: precision:  41.67%; recall:  41.67%; FB1:  41.67  120
+           Dosage: precision:  73.70%; recall:  69.45%; FB1:  71.51  327
+         Drugname: precision:  90.20%; recall:  81.28%; FB1:  85.51  847
+         Duration: precision:  52.38%; recall:  61.11%; FB1:  56.41  63
+        Frequency: precision:  79.62%; recall:  81.94%; FB1:  80.76  319
+       Indication: precision:  33.24%; recall:  41.00%; FB1:  36.72  370
+            Route: precision:  89.19%; recall:  92.31%; FB1:  90.72  148
+            SSLIF: precision:  69.93%; recall:  71.41%; FB1:  70.66  3658
+         Severity: precision:  68.89%; recall:  70.02%; FB1:  69.45  434
+processed 79041 tokens with 6324 phrases; found: 6261 phrases; correct: 4765.
+accuracy:  94.20%; precision:  76.11%; recall:  75.35%; FB1:  75.73
+              ADE: precision:  68.57%; recall:  65.75%; FB1:  67.13  140
+           Dosage: precision:  75.91%; recall:  77.64%; FB1:  76.77  494
+         Drugname: precision:  91.56%; recall:  90.73%; FB1:  91.14  1090
+         Duration: precision:  82.35%; recall:  82.35%; FB1:  82.35  85
+        Frequency: precision:  85.79%; recall:  85.33%; FB1:  85.56  366
+       Indication: precision:  45.19%; recall:  48.79%; FB1:  46.92  312
+            Route: precision:  96.59%; recall:  70.83%; FB1:  81.73  176
+            SSLIF: precision:  72.23%; recall:  72.95%; FB1:  72.59  3234
+         Severity: precision:  72.80%; recall:  64.48%; FB1:  68.39  364
+

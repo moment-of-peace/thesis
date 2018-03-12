@@ -211,5 +211,5 @@ def main():
 if __name__ == '__main__':
     #tests()
     #main()
-    s = all_f1_score(predPath='__data__/MADE-1.0/pred1218',strict=True)
+    s = all_f1_score(predPath='__data__/MADE-1.0/pred1218-part',strict=True)
     print(s)

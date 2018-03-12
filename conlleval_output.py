@@ -7,47 +7,14 @@ import numpy as np
 import pickle
 
 OTHER = 'O'
-entityIndex0={0:'B-ADE',
-              1:'I-ADE',
-              2:'B-Indication',
-              3:'I-Indication',
-              4:'B-SSLIF',
-              5:'I-SSLIF',
-              6:'B-Severity',
-              7:'I-Severity',
-              8:'B-Drugname',
-              9:'I-Drugname',
-              10:'B-Dosage',
-              11:'I-Dosage',
-              12:'B-Route',
-              13:'I-Route',
-              14:'B-Frequency',
-              15:'I-Frequency',
-              16:'B-Duration',
-              17:'I-Duration',
-              18:'O'}
-#entityIndex = {(k+1)%19:v for k,v in entityIndex0.items()}
-entityIndex = entityIndex0
+ENTITIES = [OTHER,'B-ADE','I-ADE','B-Indication','I-Indication','B-SSLIF','I-SSLIF','B-Severity',\
+'I-Severity','B-Drugname','I-Drugname','B-Dosage','I-Dosage','B-Route','I-Route','B-Frequency',\
+'I-Frequency','B-Duration','I-Duration']
+SYMBOLES = ['X','A','a','I','i','S','s','V','v','D','d','O','o','R','r','F','f','U','u']
 
-entityDict = {'A':'B-ADE',
-              'a':'I-ADE',
-              'I':'B-Indication',
-              'i':'I-Indication',
-              'S':'B-SSLIF',
-              's':'I-SSLIF',
-              'V':'B-Severity',
-              'v':'I-Severity',
-              'D':'B-Drugname',
-              'd':'I-Drugname',
-              'O':'B-Dosage',
-              'o':'I-Dosage',
-              'R':'B-Route',
-              'r':'I-Route',
-              'F':'B-Frequency',
-              'f':'I-Frequency',
-              'U':'B-Duration',
-              'u':'I-Duration',
-              'X':'O'}
+entityIndex = {i:ENTITIES[i] for i in range(19)}
+
+entityDict = {SYMBOLES[i]:ENTITIES[i] for i in range(19)}
               
 def gen_conll_output(truthPath, predPath, corpPath='__data__/MADE-1.0/corpus/', outPath='__data__/MADE-1.0/'):
     truthList = os.listdir(truthPath)
@@ -147,7 +114,7 @@ def gen_pred_tru(modelFile, shiftSize, shift, multi):
                 print(flist[i],j)
                 exit()
     '''
-    testData, testResult = gen.genTrainDataset(trainx[0:shiftSize], trainy[0:shiftSize], 20, 20, multi=multi)
+    testData, testResult = gen.genTrainDataset(trainx[0:shiftSize], trainy[0:shiftSize], 20, 20)
     
     model = km.load_model(modelFile)
     predict = model.predict(np.array(testData))
@@ -172,19 +139,10 @@ def print_multi(predict, truth):
             f.write(str(truth[i][j])+'\n\n')
     f.close()
 
-def findIndex(array, coeff=1, thres=None):
-    indexs = []
-    if thres == None:
-        thres = np.amax(array) * coeff
-    for i in range(len(array)):
-        if array[i] >= thres:
-            indexs.append(i)
-    return indexs
-
 # process a token
 def conll_formatter(word, start, fname, pred, tru, coeff):
-    prediction = findIndex(pred, coeff=coeff)
-    truth = findIndex(tru, thres=1)
+    prediction = util.findIndex(pred, coeff=coeff)
+    truth = util.findIndex(tru, thres=1)
     if len(prediction) == 1 and len(truth) == 1:
         # the token only has one label
         return '%s valid_text_00000 %d %d %s %s %s\n'%(word, start, start+len(word), fname, \
@@ -240,12 +198,12 @@ def conll_output(flist, corpPath, pred, tru, coeff):
                 tar.write('\n')
 
 if __name__ == '__main__':
-    multi = False
-    coeff = 0.9
+    multi = True
+    coeff = 0.8
     modelFile = 'model_made_90-%s_%s-epoch.h5'%(sys.argv[2], sys.argv[1])
     print(modelFile)
     flist, pred, tru = gen_pred_tru(modelFile, 90, int(sys.argv[2]), multi)
     #print_multi(pred,tru)
-    corpPath = '__data__/MADE-1.0/process_stepFour_corp'
+    corpPath = '__data__/MADE-1.0/process2_stepFour_corp'
     conll_output(flist, corpPath, pred, tru, coeff)
     

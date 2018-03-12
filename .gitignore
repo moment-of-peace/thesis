@@ -1,3 +1,7 @@
+# scripts
+*.cmd
+*.sh
+
 # binary data
 *.npy
 *.pkl

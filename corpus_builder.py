@@ -39,12 +39,26 @@ def clean(content):
         '''
     
     return result.strip(' ')
+    
+def build_corpus(path, fileName='my_corpus'):
+    flist = os.listdir(path)
+    corp = []
+    for f in flist:
+        with open(os.path.join(path, f)) as src:
+            text = src.read().strip()
+            corp.extend(text.split(' '))
+    with open(fileName,'wt') as tar:
+        tar.write(' '.join(corp))
 
 def main():
+    '''
     fid = open('my_corpus.txt', 'wt')
     path = sys.argv[1]
     searchFiles(path, fid)
     fid.close()
+    '''
+    path = '__data__/MADE-1.0/process2_stepFour_corp'
+    build_corpus(path)
 
 if __name__ == '__main__':
     main()

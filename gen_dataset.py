@@ -3,40 +3,14 @@ import pickle
 import numpy as np
 import my_utils as util
 
-'''
-entityDict = {'a':[1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-              'i':[0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-              's':[0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-              'v':[0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-              'd':[0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-              'o':[0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-              'r':[0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-              'f':[0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-              'u':[0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-              'x':[0, 0, 0, 0, 0, 0, 0, 0, 0, 1]}
-'''
-entityDict = {'A':[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-              'a':[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-              'I':[0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-              'i':[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-              'S':[0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-              's':[0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-              'V':[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-              'v':[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-              'D':[0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-              'd':[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-              'O':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-              'o':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-              'R':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-              'r':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-              'F':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-              'f':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-              'U':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-              'u':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-              'X':[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]}
 
-# reversedDict = {0:'a', 1:'i', 2:'s', 3:'v', 4:'d', 5:'o', 6:'r', 7:'f', 8:'u', 9:'X'}
-reversedDict = {0:'A',1:'a',2:'I',3:'i',4:'S',5:'s',6:'V',7:'v',8:'D',9:'d',10:'O',11:'o',12:'R',13:'r',14:'F',15:'f',16:'U',17:'u',18:'X'}
+def gen_entity_vec(index):
+    return [1 if i==index else 0 for i in range(19)]
+    
+entities = ['X','A','a','I','i','S','s','V','v','D','d','O','o','R','r','F','f','U','u']
+entityDict = {entities[i]:gen_entity_vec(i) for i in range(19)}
+reversedDict = {i:entities[i] for i in range(19)}
+
 # convert words in files into index, return a list of different length lists
 def getIndex(path, filelist, vocab):
     data = []
@@ -91,15 +65,13 @@ def numToBin(num):
     return result
 
 # use window method to cut datasets for training
-def genTrainDataset(trainx, trainy, windowsize, step, multi=False):
+def genTrainDataset(trainx, trainy, windowsize, step):
     data = []
     result = []
     for i in range(0, len(trainx)):
         data.extend(window(trainx[i],windowsize,step,0)) # 0 or 1 ?
-        if multi:
-            result.extend(window(trainy[i],windowsize,step,entityDict['A']))
-        else:
-            result.extend(window(trainy[i],windowsize,step,entityDict['X']))
+        result.extend(window(trainy[i],windowsize,step,entityDict['X']))
+            
     return data, result 
 def window(data, windowsize, step, padding):
     result = []

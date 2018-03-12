@@ -17,15 +17,15 @@ ENTITY_DIC = {'ADE':'A',
               'Route':'R',
               'Frequency':'F',
               'Duration':'U'}
-ENTITY_INDEX={'ADE':0,
-              'Indication':2,
-              'SSLIF':4,
-              'Severity':6,
-              'Drug':8, 
-              'Dose':10,
-              'Route':12,
-              'Frequency':14,
-              'Duration':16}
+ENTITY_INDEX={'ADE':1,
+              'Indication':3,
+              'SSLIF':5,
+              'Severity':7,
+              'Drug':9, 
+              'Dose':11,
+              'Route':13,
+              'Frequency':15,
+              'Duration':17}
 OTHER = 'X'
 
 TAG_ENTITY = 'infon'
@@ -65,7 +65,7 @@ def parseFileBin(corp, anno, target, xpath):
                 bits = index + 1
             if n[i] == 1:
                 n[i] = 0
-            n[i] |= (2<<bits)
+            n[i] |= (1<<bits)
             
     # write characters into new file
     np.save(target, n)
@@ -212,15 +212,23 @@ def countDigits(corp, i):
 # insert spaces to split letters, numbers, and other signals
 def stepTwo(corp, entity, spaceChar):
     c, e, trace = [], [], []
+    stops = ['.',',',';',':','(',')','[',']','?','!']
     i = 1
     pre = 0 # 0: space, 1: letter, 2: number, 3: other
     while i < len(corp)-1:
         cur = represent(corp[i])
         
-        if pre != 0 and cur != 0 and pre != cur:
+        if cur != 0 and corp[i-1] in stops:
+            c.append(' ')
+            e.append(spaceChar)
+            trace.append((i-1, 1))
+        elif pre != 0 and cur != 0 and pre != cur:
             # words such as "a.m." should not be split
             if corp[i] == '.' and corp[i-1].isalpha() and corp[i+1].isalpha():
-                pass
+                if (i > 1 and corp[i-2].isalpha()) or (i < len(corp)-2 and corp[i+2].isalpha()):
+                    c.append(' ')
+                    e.append(spaceChar)
+                    trace.append((i-1, 1))
             elif corp[i] == '.' and corp[i-1].isalpha() and i > 1 and corp[i-2] == '.':
                 pass
             elif cur == 1 and corp[i-1] == '.' and i > 1 and corp[i-2].isalpha():
@@ -229,7 +237,7 @@ def stepTwo(corp, entity, spaceChar):
                 c.append(' ')
                 e.append(spaceChar)
                 trace.append((i-1, 1))
-        elif pre != 0 and (corp[i] == '.' or corp[i] == ',' or corp[i] == ';' or corp[i] == ')'):
+        elif pre != 0 and (corp[i] in stops):
             c.append(' ')
             e.append(spaceChar)
             trace.append((i-1, 1))
@@ -335,14 +343,85 @@ def checkCorpEnti(corpPath, entityPath, flag, spaceChar):
                     exit()
     print('checks finished')
 
+# deal with "dailyadditional"
+def stepX(corpPath, entityPath, spaceChar, newCPath='__data__/MADE-1.0/corpX', newEPath='__data__/MADE-1.0/entitiesX'):
+    if not os.path.exists(newCPath):
+        os.makedirs(newCPath)
+    if not os.path.exists(newEPath):
+        os.makedirs(newEPath)
+        
+    flist = os.listdir(corpPath)
+    for f in flist:
+        newCorp = []
+        newEntity = []
+    
+        with open(os.path.join(corpPath, f)) as src:
+            corp = src.read()
+        if spaceChar == 0:
+            entity = np.load(os.path.join(entityPath, f+'.npy'))
+        else:
+            with open(os.path.join(entityPath, f), 'rt') as src:
+                entity = src.read()
+        for i in range(len(corp)-10):
+            newCorp.append(corp[i])
+            newEntity.append(entity[i])
+            if corp[i] != ' ' and corp[i+1:i+11].lower() == 'additional':
+                newCorp.append(' ')
+                newEntity.append(spaceChar)
+        with open(os.path.join(newCPath, f), 'wt') as tar:
+            tar.write(''.join(newCorp))
+        if spaceChar == 0:
+            np.save(os.path.join(newEPath, f), np.array(newEntity, dtype=np.uint32))
+        else:
+            with open(os.path.join(newEPath, f), 'wt') as tar:
+                tar.write(''.join(newEntity))
+
+# sentences level tokenize
+def toSentence(path, newPath):
+    if not os.path.exists(newPath):
+        os.makedirs(newPath)
+        
+    flist = os.listdir(path)
+    for f in flist:
+        newText = ''
+        with open(os.path.join(path, f)) as src:
+            text = src.read()
+            start = 0
+            index = text.find(' . ')
+            while index != -1:
+                newText += (text[start:index] + ' .\n')
+                start = index + 3
+                index = text.find(' . ', index+1)
+            newText += text[start:]
+            with open(os.path.join(newPath, f), 'wt') as tar:
+                tar.write(newText)
+
+# the max length of sentences
+def max_length(path):
+    max_len = 0
+    name = ''
+    index = 0
+    
+    flist = os.listdir(path)
+    for f in flist:
+        with open(os.path.join(path,f)) as src:
+            sentences = src.read().strip().split('\n')
+            for i in range(len(sentences)):
+                length = len(sentences[i].split(' '))
+                if length > max_len:
+                    max_len = length
+                    index = i
+                    name = f
+    print(max_len, name, i)
+
 def main():
     P = '__data__/MADE-1.0/'
     spaceChar = 0
     
     #toBinEntities(P+'corpus', P+'annotations')
-    #preprocesses(P+'corpus', P+'entities2', [1,2,3,4], spaceChar, newPath='__data__/MADE-1.0/process2')
+    preprocesses(P+'corpusX', P+'entitiesX', [1,2,3,4], spaceChar, newPath='__data__/MADE-1.0/process2')
     
-    checkCorpEnti(P+'corpus', P+'entities2', False, spaceChar)
+    checkCorpEnti(P+'corpusX', P+'entitiesX', False, spaceChar)
     checkCorpEnti(P+'process2_stepOne_corp', P+'process2_stepOne_entity', True, spaceChar)
     checkCorpEnti(P+'process2_stepTwo_corp', P+'process2_stepTwo_entity', True, spaceChar)
     checkCorpEnti(P+'process2_stepThree_corp', P+'process2_stepThree_entity', True, spaceChar)
@@ -350,4 +429,6 @@ def main():
     
     
 if __name__ == '__main__':
-    main()
+    #main()
+    #toSentence('__data__/MADE-1.0/process2_stepFour_corp','__data__/MADE-1.0/corp_sentence')
+    max_length('__data__/MADE-1.0/corp_sentence')

@@ -1,4 +1,5 @@
 import os
+import numpy as np
 '''
 from random import shuffle
 
@@ -7,7 +8,7 @@ flist = os.listdir(folder)
 shuffle(flist)
 print(flist)
 '''
-import preprocessing_made as pre
+#import preprocessing_made as pre
 import my_utils as util
 '''
 c,e,t = pre.stepThree('   123  1 2  a bb    ', '   aaa  b b  1 22    ')
@@ -52,7 +53,7 @@ for f in flist:
             print(f, i, entity[i-1], entity[i], entity[i+1])
         i += 1
 '''
-
+'''
 path = 'results/made-uppercase'
 for i in range(10):
     f = 'result_90_%d_10.txt'%(i)
@@ -61,4 +62,20 @@ for i in range(10):
         content = src.read()
     with open('joint.txt', 'at') as tar:
         tar.write(content)
-
+'''
+# count how many times each entity appears, and the number of each nested entity
+def count_entities(path):
+    result = [0 for i in range(19)]
+    multi_enti = [0 for i in range(19)]
+    flist = os.listdir(path)
+    for f in flist:
+        n = np.load(os.path.join(path, f))
+        for num in n:
+            index = util.findIndex(util.numToBin(num), thres=1)
+            if len(index) == 1:
+                result[index[0]] += 1
+            else:
+                for i in range(len(index)):
+                    result[index[i]] += 1
+                    multi_enti[index[i]] += 1
+    return result, multi_enti

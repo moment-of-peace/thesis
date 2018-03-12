@@ -40,6 +40,18 @@ def maxIndex(l):
         sum += e
     return round(sum/len(index))
 
+# find multiple index 
+def findIndex(array, coeff=1, thres=None):
+    indexs = []
+    if thres == None:
+        thres = np.amax(array) * coeff
+    for i in range(len(array)):
+        if array[i] >= thres:
+            indexs.append(i)
+    if (0 in indexs) and (len(indexs) > 1):
+        indexs.remove(0)
+    return indexs
+    
 # write a file into a directory, create the path if not exists
 def write_path_file(path, fileName, content, flag='wt'):
     if not os.path.exists(path):
@@ -106,6 +118,15 @@ def del_linefeed(string, chara=' '):
             result += c
     return result
 
+# convert a number to a list of 0 and 1 which indicates the binary format
+# example: 6 -> [0, 1, 1]
+def numToBin(num):
+    result = []
+    for i in range(19):
+        result.append(num&1)
+        num = num >> 1
+    return result
+    
 if __name__ == '__main__':
     join_files('__data__/MADE-1.0/process_stepFour_corp', separator=' . ')
     '''

@@ -9,7 +9,7 @@ import my_utils as util
 RAWENTITY=['ADE','Indication','SSLIF','Severity','Drug','Dose','Route','Frequency','Duration']
 global anno_id
 
-def writeXML(fileName, corpus, index, entities, coeff=1, path='__data__/MADE-1.0-test/xml/'):
+def writeXML(fileName, corpus, index, entities, coeff=1, path='__data__/MADE-1.0-test/xml/',nclass=0):
     global anno_id
     root = et.Element('collection')
     source = et.SubElement(root, 'source')
@@ -27,7 +27,8 @@ def writeXML(fileName, corpus, index, entities, coeff=1, path='__data__/MADE-1.0
     preIndex = []
     for i in range(len(index)):
         [start, end] = index[i].tolist()
-        entityIndex = util.findIndex(entities[i], coeff=coeff)
+        rawEntity = extendEntity(entities[i],nclass)
+        entityIndex = util.findIndex(rawEntity, coeff=coeff)
         # ignore 'other' entity
         if 0 in entityIndex:
             assert(len(entityIndex)==1)
@@ -42,7 +43,7 @@ def writeXML(fileName, corpus, index, entities, coeff=1, path='__data__/MADE-1.0
             new_end = end
             j = i+1
             while j<len(index):
-                nextIndex = util.findIndex(entities[j], coeff=coeff)
+                nextIndex = util.findIndex(extendEntity(entities[j],nclass), coeff=coeff)
                 if i_ind in nextIndex:
                     new_end = index[j][1]
                     j += 1
@@ -59,7 +60,17 @@ def writeXML(fileName, corpus, index, entities, coeff=1, path='__data__/MADE-1.0
     tree = et.ElementTree(root)
     tree.write(os.path.join(path,fileName+'.bioc.xml'),encoding='utf-8',xml_declaration=True,short_empty_elements=False)
 
-def test(P='__data__/MADE-1.0-test/'):
+# restore the original length entity by padding 0
+def extendEntity(entity, nclass):
+    if len(entity) == 19:
+        return entity
+    result = [0 for i in range(19)]
+    result[0] = entity[0]
+    result[nclass] = entity[1]
+    result[nclass+1] = entity[2]
+    return result
+    
+def test(nclass=0,P='__data__/MADE-1.0-test/'):
     global anno_id
     anno_id = 0
     corpPath = P + 'corpus'
@@ -69,7 +80,11 @@ def test(P='__data__/MADE-1.0-test/'):
     if not os.path.exists(outpath):
         os.makedirs(outpath)
     flist = os.listdir(corpPath)
-    truth = gen.genResultBin(P+'process2_stepThree_entity', flist)
+    y = gen.genResultBin(P+'process2_stepThree_entity', flist)
+    if nclass != 0:
+        truth = gen.twoClass(y, [nclass,nclass+1])
+    else:
+        truth = y
     #print('start checking')
     for i in range(len(truth)):
         #print(flist[i])
@@ -78,16 +93,12 @@ def test(P='__data__/MADE-1.0-test/'):
         with open(os.path.join(corpPath, flist[i])) as src:
             text = src.read().rstrip()
             assert(indices[-1][1]<=len(text))
-        writeXML(flist[i], text, indices, truth[i], path=outpath)
+        writeXML(flist[i], text, indices, truth[i], path=outpath,nclass=nclass)
     
-def main():
+def mainProcess(modelFile, vocabPath,P='__data__/MADE-1.0-test/',nclass=0):
     global anno_id
     anno_id = 0
-    P='__data__/MADE-1.0-test/'
-    vocabPath = 'vocab_made_8000.pkl'
-    modelFile = 'model_made_36-epoch.h5'
     corpCutPath = P+'corp_sent_cut100'
-
     corpPath = P + 'corpus'
     trainPath = P + 'process2_stepFour_corp'
     truthPath = P + 'process2_stepThree_entity'
@@ -95,6 +106,7 @@ def main():
     outpath = P + 'pred-xml'
     if not os.path.exists(outpath):
         os.makedirs(outpath)
+        
     flist = os.listdir(corpPath)
     with open(vocabPath, 'rb') as handle:   # load vocabulary from file
         vocab = pickle.load(handle)
@@ -121,7 +133,7 @@ def main():
         # extract entities in prediction
         entities = getEntities(textCut, predict, start)
         assert(len(entities)==len(indices))
-        writeXML(flist[i], text, indices, entities, path=outpath)
+        writeXML(flist[i], text, indices, entities, path=outpath, nclass=nclass)
         start += len(textCut)
 def getEntities(text, predict, start):
     result = []
@@ -134,5 +146,10 @@ def getEntities(text, predict, start):
     return result
     
 if __name__ == '__main__':
-    #test()
-    main()
+    #vocabPath = 'vocab_made_8000.pkl'
+    #vocabPath = 'vocab_glove_400000.pkl'
+    vocabPath = 'vocab_nodiscard_8000.pkl'
+    modelFile = 'model_made_45-epoch.h5'
+    #modelFile = 'model_made_90-0_36-epoch-glove-sent.h5'
+    #test(nclass=17,P='__data__/MADE2-1.0-test/')
+    mainProcess(modelFile, vocabPath, P='__data__/MADE2-1.0-test/', nclass=0)

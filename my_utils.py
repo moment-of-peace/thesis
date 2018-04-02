@@ -71,16 +71,27 @@ def process_files(path, func):
         func(content)
         
 # join all files in a directory and form a single file
-def join_files(path, fileName='joint_file.txt', separator=''):
+def join_files(path, fileName='joint_file', separator=' ', discard=False):
     flist = os.listdir(path)
-    sep = ''
+    text, sep = '', ''
     for f in flist:
         print(f)
         with open(os.path.join(path, f), 'rt') as src:
-            content = src.read()
-        with open(fileName, 'at') as tar:
-            tar.write(sep + content)
+            content = src.read().strip()
+        if discard:
+            # discard some head and tail meaningless text
+            start = content.find('clinic note')
+            end = content.find(' e - signed')
+            if end < 0:
+                end = content.find(' signed by')
+            start = start if start > 0 else 0
+            end = end if end > 0 else len(content)
+            text += (sep + content[start+12:end])
+        else:
+            text += (sep + content)
         sep = separator
+    with open(fileName, 'wt') as tar:
+        tar.write(text)
 
 # generate vocabulary (a dict) and weights (2D np array) from a gensim style embedding file
 def gen_weights_vocab(modelFile, name='', saveFlag=True):
@@ -146,9 +157,9 @@ def shiftFiles(flist, path, newPath, shiftSize, shift, tail=''):
         shutil.copy(os.path.join(path,flist[i]+tail),os.path.join(newPath,flist[i]+tail))
     
 if __name__ == '__main__':
-    join_files('__data__/MADE-1.0/process_stepFour_corp', separator=' . ')
-    '''
-    gen_weights_vocab('__data__/word2vec_model_made_6000.txt', name='_made_6000')
-    gen_weights_vocab('__data__/word2vec_model_made_8000.txt', name='_made_8000')
-    gen_weights_vocab('__data__/word2vec_model_made_10000.txt', name='_made_10000')
-    '''
+    #join_files('__data__/MADE2-1.0/process2_stepFour_corp', separator=' . ',discard=False)
+    
+    gen_weights_vocab('word2vec_model_withdiscard.txt', name='discard')
+    #gen_weights_vocab('__data__/word2vec_model_made_8000.txt', name='_made_8000')
+    #gen_weights_vocab('__data__/word2vec_model_made_10000.txt', name='_made_10000')
+    

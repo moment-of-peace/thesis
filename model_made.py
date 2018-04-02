@@ -57,10 +57,12 @@ def cmp_file(x):
 def main():
     shift = 0
     shiftSize = 90
-    weightsPath = 'weights_made_8000.npy'
-    vocabPath = 'vocab_made_8000.pkl'
-    trainPath = '__data__/MADE-1.0/process2_stepFour_corp'
-    truthPath = '__data__/MADE-1.0/process2_stepThree_entity'
+    weightsPath = 'weights_nodiscard_8000.npy'
+    vocabPath = 'vocab_nodiscard_8000.pkl'
+    #weightsPath = 'weights_glove_400000.npy'
+    #vocabPath = 'vocab_glove_400000.pkl'
+    trainPath = '__data__/MADE2-1.0/process2_stepFour_corp'
+    truthPath = '__data__/MADE2-1.0/process2_stepThree_entity'
     windowSize = 20
     epoch = 30
     nclass = -1
@@ -90,7 +92,7 @@ def main():
             epoch = int(para)
         if opt == '-c':
             nclass = int(para)
-            outputsize = 2
+            outputsize = 3
         if opt == '-m':
             maxFold = int(para)
         if opt == '-f':
@@ -101,7 +103,7 @@ def main():
     with open(vocabPath, 'rb') as handle:   # load vocabulary from file
         vocab = pickle.load(handle)
     
-    '''
+    
     flist = util.sorted_file_list(trainPath, cmp_file)
     print(flist[:10])
     #flist = gen.cycleShift(flist, shift, shiftSize)
@@ -111,8 +113,7 @@ def main():
     y = gen.genResultBin(truthPath, flist)
     # convert to two-class
     if nclass != -1:
-        y = gen.twoClass(y, nclass)
-    
+        y = gen.twoClass(y, [nclass,nclass+1])
     # k-folds using scikit learn
     datax, datay = gen.toSent(flist, trainPath, x, y)
     x_pad, y_pad = gen.padSent(datax, datay, 100)
@@ -135,8 +136,8 @@ def main():
             if fold == maxFold:
                 break
     else:
-        np.save('trainx_%d-epoch'%(epoch),np.array(x_pad))
-        np.save('trainy_%d-epoch'%(epoch),np.array(y_pad))
+        #np.save('trainx_%d-epoch'%(epoch),np.array(x_pad))
+        #np.save('trainy_%d-epoch'%(epoch),np.array(y_pad))
         model = trainModel(np.array(x_pad), np.array(y_pad), embedModel, epoch, outputsize)
         model.save('model_made_%d-epoch.h5'%(epoch))
     '''    
@@ -176,7 +177,7 @@ def main():
 
     #restore
     #gen.restore(flist[0:shiftSize], pred)
-    
+    '''
 
 if __name__ == '__main__':
     main()

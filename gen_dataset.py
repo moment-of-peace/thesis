@@ -119,16 +119,17 @@ def toSent(flist, corpPath, trainx, trainy):
 
 # pad sentences to the same length
 def padSent(x, y, length):
+    sizey = len(y[0][0])
     x_pad, y_pad = [], []
     for i in range(len(x)):
         sent_len = len(x[i])
         if sent_len > length:
             x_pad.extend(cutSent(x[i], length, 1))
-            y_pad.extend(cutSent(y[i], length, entityDict['X']))
+            y_pad.extend(cutSent(y[i], length, entityDict['X'][0:sizey]))
         else:
             tempx, tempy = x[i][:], y[i][:]
             tempx.extend([1 for i in range(length-sent_len)])
-            tempy.extend([entityDict['X'] for i in range(length-sent_len)])
+            tempy.extend([entityDict['X'][0:sizey] for i in range(length-sent_len)])
             x_pad.append(tempx)
             y_pad.append(tempy)
     return x_pad, y_pad
@@ -183,7 +184,11 @@ def twoClass(data, n):
     for entity in data:
         newEnti = []
         for vec in entity:
-            newEnti.append([0,1] if vec[n]==1 else [1,0])
+            v = [0,0,0]
+            v[0] = vec[0]
+            v[1] = vec[n[0]]
+            v[2] = vec[n[1]]
+            newEnti.append(v)
         result.append(newEnti)
     return result
 

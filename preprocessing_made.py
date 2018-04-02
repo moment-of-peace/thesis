@@ -256,7 +256,7 @@ def stepOne(fileName, corp, entity, spaceChar):
                 spaceFlag = True
                 token_start = i-1
         elif cur == 3:
-            if pre != 0:
+            if (pre not in {0,3}) or (corp[i] in {',','.'} and pre != 0):
                 appendSpace(c,e,trace,index,spaceChar,token_start,i)
                 spaceFlag = True
                 token_start = i-1
@@ -423,39 +423,6 @@ def checkCorpEnti(corpPath, entityPath, flag, spaceChar, fileNum):
                     exit()
     print('checks finished')
 
-# deal with "dailyadditional"
-def stepX(corpPath, entityPath, spaceChar, newCPath='__data__/MADE-1.0/corpX', newEPath='__data__/MADE-1.0/entitiesX'):
-    if not os.path.exists(newCPath):
-        os.makedirs(newCPath)
-    if not os.path.exists(newEPath):
-        os.makedirs(newEPath)
-        
-    flist = os.listdir(corpPath)
-    for f in flist:
-        newCorp = []
-        newEntity = []
-    
-        with open(os.path.join(corpPath, f)) as src:
-            corp = src.read()
-        if spaceChar == 0:
-            entity = np.load(os.path.join(entityPath, f+'.npy'))
-        else:
-            with open(os.path.join(entityPath, f), 'rt') as src:
-                entity = src.read()
-        for i in range(len(corp)-10):
-            newCorp.append(corp[i])
-            newEntity.append(entity[i])
-            if corp[i] != ' ' and corp[i+1:i+11].lower() == 'additional':
-                newCorp.append(' ')
-                newEntity.append(spaceChar)
-        with open(os.path.join(newCPath, f), 'wt') as tar:
-            tar.write(''.join(newCorp))
-        if spaceChar == 0:
-            np.save(os.path.join(newEPath, f), np.array(newEntity, dtype=np.uint32))
-        else:
-            with open(os.path.join(newEPath, f), 'wt') as tar:
-                tar.write(''.join(newEntity))
-
 # sentences level tokenize
 def toSentence(path, newPath):
     if not os.path.exists(newPath):
@@ -498,12 +465,31 @@ def max_length(path):
     with open('long_sent.txt','wt') as tar:
         tar.write(text)
 
-def main():
-    P = '__data__/MADE-1.0/'
-    fileNum = 876   #876 213
-    spaceChar = 0
-    
-    #toBinEntities(P+'corpus', P+'annotations', newPath=P+'entities')
+# cut sentences in corp
+def cutSentCorp(path, length, newPath):
+    if not os.path.exists(newPath):
+        os.makedirs(newPath)
+    flist = os.listdir(path)
+    for f in flist:
+        textCut = ''
+        with open(os.path.join(path,f)) as src:
+            text = src.read().strip().split('\n')
+            for s in text:
+                sent = s.strip().split(' ')
+                if len(sent) <= length:
+                    textCut += (' '.join(sent)+'\n')
+                else:
+                    for i in range(int(len(sent)/length)):
+                        start = i * length
+                        textCut += (' '.join(sent[start:start+length])+'\n')
+                    m = len(sent)%length
+                    if m != 0:
+                        textCut += (' '.join(sent[-m:])+'\n')
+        with open(os.path.join(newPath,f),'wt') as tar:
+            tar.write(textCut)
+            
+def mainProcess(P, fileNum, spaceChar = 0):    
+    toBinEntities(P+'corpus', P+'annotations', newPath=P+'entities')
     preprocesses(P+'corpus', P+'entities', [1,2,3,4], spaceChar, newPath=P+'process2')
     
     checkCorpEnti(P+'corpus', P+'entities', False, spaceChar, fileNum)
@@ -514,6 +500,9 @@ def main():
     
     
 if __name__ == '__main__':
-    #main()
-    toSentence('__data__/MADE-1.0-test/process2_stepFour_corp','__data__/MADE-1.0-test/corp_sentence')
+    P = '__data__/MADE2-1.0-test/'
+    fileNum = 213   #876 213
+    mainProcess(P, fileNum)
+    toSentence(P + 'process2_stepFour_corp',P + 'corp_sentence')
+    cutSentCorp(P + 'corp_sentence',100,P + 'corp_sent_cut%d'%100)
     #max_length('__data__/MADE-1.0-test/corp_sent_cut100')

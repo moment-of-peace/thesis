@@ -79,3 +79,29 @@ def count_entities(path):
                     result[index[i]] += 1
                     multi_enti[index[i]] += 1
     return result, multi_enti
+    
+# cut sentences in corp
+def cutSentCorp(path, length):
+    newPath = '__data__/MADE-1.0-test/corp_sent_cut'
+    if not os.path.exists(newPath):
+        os.makedirs(newPath)
+    flist = os.listdir(path)
+    for f in flist:
+        textCut = ''
+        with open(os.path.join(path,f)) as src:
+            text = src.read().strip().split('\n')
+            for s in text:
+                sent = s.strip().split(' ')
+                if len(sent) <= length:
+                    textCut += (' '.join(sent)+'\n')
+                else:
+                    for i in range(int(len(sent)/length)):
+                        start = i * length
+                        textCut += (' '.join(sent[start:start+length])+'\n')
+                    m = len(sent)%length
+                    if m != 0:
+                        textCut += (' '.join(sent[-m:])+'\n')
+        with open(os.path.join(newPath,f),'wt') as tar:
+            tar.write(textCut)
+
+cutSentCorp('__data__/MADE-1.0-test/corp_sentence',100)

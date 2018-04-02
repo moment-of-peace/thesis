@@ -33,6 +33,7 @@ TAG_LOC = 'location'
 TAG_TEXT = 'text'
 ATTR_OFF = 'offset'
 ATTR_LEN = 'length'
+indexPath = '__data__/index'
 
 def parseFileBin(corp, anno, target, xpath):
     # parse xml
@@ -113,7 +114,7 @@ def parseFile(corp, anno, target, xpath):
     # write characters into new file
     with open(target, 'wt') as tar:
         tar.write(''.join(tarChar))
-	
+    
 def toTokenEntities(corpPath, annoPath, xpath = './document/passage/annotation', newPath='__data__/MADE-1.0/entities'):
     if not os.path.exists(newPath):
         os.makedirs(newPath)
@@ -157,15 +158,17 @@ def processStep(corp, entityTemp, stepFunc, fileName, spaceChar, newPath='__data
     path = os.path.join('%s_%s_entity'%(newPath,stepFunc.__name__))
     if not os.path.exists(path):
         os.makedirs(path)
+    if not os.path.exists(indexPath):
+        os.makedirs(indexPath)
     # avoid index out of range
     corp = ' ' + corp + ' '
     if spaceChar == 0:
-        entity = np.zeros(len(entityTemp) + 2)
+        entity = np.zeros(len(entityTemp) + 2, dtype=np.uint32)
         entity[1:-1] = entityTemp[:]
     else:
         entity = ' ' + entity + ' '
 
-    c, e, trace = stepFunc(corp, entity, spaceChar)
+    c, e, trace = stepFunc(fileName, corp, entity, spaceChar)
     newCorp = ''.join(c)
 
     # write processed corpus, entity, and processing trace to new files
@@ -181,7 +184,7 @@ def processStep(corp, entityTemp, stepFunc, fileName, spaceChar, newPath='__data
     return newCorp, newEntity
 
 # the first step of preprocessing: remove "," and "." in numbers, put spaces at positions of '\t', '\n', and ' '
-def stepOne(corp, entity, spaceChar):
+def stepTwo(fileName, corp, entity, spaceChar):
     c, e, trace = [], [], []
     i = 1
     while i < len(corp)-1:
@@ -192,7 +195,7 @@ def stepOne(corp, entity, spaceChar):
             trace.append((i-1, -num))
             i += num
             continue
-        elif corp[i]=='\t' or corp[i]=='\n' or corp[i]==' ':
+        elif corp[i].isspace():
             c.append(' ')
             e.append(spaceChar)
         else:
@@ -210,14 +213,59 @@ def countDigits(corp, i):
     return num
 
 # insert spaces to split letters, numbers, and other signals
-def stepTwo(corp, entity, spaceChar):
-    c, e, trace = [], [], []
+def stepOne(fileName, corp, entity, spaceChar):
+    c, e, trace, index = [], [], [], []
     stops = ['.',',',';',':','(',')','[',']','?','!']
     i = 1
+    token_start = 0
     pre = 0 # 0: space, 1: letter, 2: number, 3: other
-    while i < len(corp)-1:
+    # c = ' qwe,df.f.ff, ff.ff.ff, f.f.p.a&kjl q.w.e.33.3 45,9 '
+    length = len(corp)
+    while i < length-1:
+        spaceFlag = False   # indicate whether an extra space is inserted
         cur = represent(corp[i])
-        
+        if pre != 0 and i < length-11 and corp[i:i+10].lower() == 'additional':
+            appendSpace(c,e,trace,index,spaceChar,token_start,i)
+            spaceFlag = True
+            token_start = i-1
+        elif cur == 1:
+            if corp[i-1] == '.' and corp[i-2].isalpha() and corp[i+1] == '.':
+                pass
+            elif pre == 2 or pre == 3:
+                appendSpace(c,e,trace,index,spaceChar,token_start,i)
+                spaceFlag = True
+                token_start = i-1
+        elif cur == 2:
+            if corp[i-1] in {',','.'} and corp[i-2].isdigit():
+                pass
+            elif pre == 1 or pre == 3:
+                appendSpace(c,e,trace,index,spaceChar,token_start,i)
+                spaceFlag = True
+                token_start = i-1
+        elif corp[i] == ',' and corp[i-1].isdigit() and corp[i+1].isdigit():
+            pass
+        elif corp[i] == '.':
+            if corp[i-1].isalpha() and corp[i-2] == '.':
+                pass
+            elif corp[i-1].isalpha() and corp[i+1].isalpha() and corp[i+2] == '.':
+                pass
+            elif corp[i-1].isdigit() and corp[i+1].isdigit():
+                pass
+            else:
+                appendSpace(c,e,trace,index,spaceChar,token_start,i)
+                spaceFlag = True
+                token_start = i-1
+        elif cur == 3:
+            if pre != 0:
+                appendSpace(c,e,trace,index,spaceChar,token_start,i)
+                spaceFlag = True
+                token_start = i-1
+        elif cur == 0:
+            if token_start != (i-1):
+                index.append([token_start,i-1])
+            entity[i] = 0
+            token_start = i
+        '''
         if cur != 0 and corp[i-1] in stops:
             c.append(' ')
             e.append(spaceChar)
@@ -242,6 +290,7 @@ def stepTwo(corp, entity, spaceChar):
             e.append(spaceChar)
             trace.append((i-1, 1))
         '''
+        '''
         if pre != 0:
             if (cur != 0 and pre != cur) or cur == 3:
                 c.append(' ')
@@ -249,9 +298,16 @@ def stepTwo(corp, entity, spaceChar):
                 trace.append((i-1, 1))
         '''
         c.append(corp[i])
-        e.append(entity[i])
+        if spaceFlag:
+            e.append(BtoIentity(entity[i]))
+        else:
+            e.append(entity[i])
         pre = cur
         i += 1
+    # the start and end index of the final token
+    if token_start != (len(corp)-2):
+        index.append([token_start,len(corp)-2])
+    np.save(os.path.join(indexPath,fileName), np.array(index))
     return c, e, trace
     
 # use 0, 1, 2, 3, to represent a char. 0: space, 1: letter, 2: number, 3: other
@@ -263,9 +319,33 @@ def represent(chara):
     if chara.isdigit():
         return 2
     return 3
-
+# append space to corp, entity, trace log
+def appendSpace(c,e,trace,index,spaceChar,token_start,i):
+    c.append(' ')
+    e.append(spaceChar)
+    trace.append((i-1, 1))
+    if token_start != (i-1):
+        index.append([token_start,i-1])
+# after insert a space, convert the "B" entity to "I"
+def BtoIentity(num):
+    if num in {0,1}:
+        return num
+    array = util.numToBin(num)
+    index = util.findIndex(array, thres=1)
+    result = []
+    for n in index:
+        if n%2 == 1:
+            if n+1 not in index:
+                result.append(n+1)
+        else:
+            result.append(n)
+    newNum = 0
+    for n in result:
+        newNum += 1<<n
+    return newNum
+    
 # remove duplicated spaces (including start and tail spaces)
-def stepThree(corp, entity, spaceChar):
+def stepThree(fileName, corp, entity, spaceChar):
     c, e, trace = [], [], []
     i = 1
     flag = (0, True)
@@ -316,12 +396,12 @@ def convertNum(word):
     return result
     
 # check corpus and entities
-def checkCorpEnti(corpPath, entityPath, flag, spaceChar):
+def checkCorpEnti(corpPath, entityPath, flag, spaceChar, fileNum):
     flist = os.listdir(corpPath)
     flist2 = os.listdir(entityPath)
     # check number of files
-    assert(len(flist) == 876)
-    assert(len(flist2) == 876)
+    assert(len(flist) == fileNum)
+    assert(len(flist2) == fileNum)
     
     for f in flist:
         #print(f)
@@ -338,7 +418,7 @@ def checkCorpEnti(corpPath, entityPath, flag, spaceChar):
         if flag:
             for i in range(len(corp)):
                 # check spaces
-                if (corp[i]==' ' and entity[i]!=spaceChar) or (corp[i]!=' ' and entity[i]==spaceChar):
+                if (corp[i].isspace() and entity[i]!=spaceChar) or ((not corp[i].isspace()) and entity[i]==spaceChar):
                     print('  wrong space at', i)
                     exit()
     print('checks finished')
@@ -398,9 +478,10 @@ def toSentence(path, newPath):
 
 # the max length of sentences
 def max_length(path):
-    max_len = 0
+    max_len = 100
     name = ''
     index = 0
+    text = ''
     
     flist = os.listdir(path)
     for f in flist:
@@ -409,26 +490,30 @@ def max_length(path):
             for i in range(len(sentences)):
                 length = len(sentences[i].split(' '))
                 if length > max_len:
+                    text += (sentences[i] + '\n')
                     max_len = length
-                    index = i
-                    name = f
+                    #index = i
+                    #name = f
     print(max_len, name, i)
+    with open('long_sent.txt','wt') as tar:
+        tar.write(text)
 
 def main():
     P = '__data__/MADE-1.0/'
+    fileNum = 876   #876 213
     spaceChar = 0
     
-    #toBinEntities(P+'corpus', P+'annotations')
-    preprocesses(P+'corpusX', P+'entitiesX', [1,2,3,4], spaceChar, newPath='__data__/MADE-1.0/process2')
+    #toBinEntities(P+'corpus', P+'annotations', newPath=P+'entities')
+    preprocesses(P+'corpus', P+'entities', [1,2,3,4], spaceChar, newPath=P+'process2')
     
-    checkCorpEnti(P+'corpusX', P+'entitiesX', False, spaceChar)
-    checkCorpEnti(P+'process2_stepOne_corp', P+'process2_stepOne_entity', True, spaceChar)
-    checkCorpEnti(P+'process2_stepTwo_corp', P+'process2_stepTwo_entity', True, spaceChar)
-    checkCorpEnti(P+'process2_stepThree_corp', P+'process2_stepThree_entity', True, spaceChar)
-    checkCorpEnti(P+'process2_stepFour_corp', P+'process2_stepThree_entity', True, spaceChar)
+    checkCorpEnti(P+'corpus', P+'entities', False, spaceChar, fileNum)
+    checkCorpEnti(P+'process2_stepOne_corp', P+'process2_stepOne_entity', True, spaceChar, fileNum)
+    checkCorpEnti(P+'process2_stepTwo_corp', P+'process2_stepTwo_entity', True, spaceChar, fileNum)
+    checkCorpEnti(P+'process2_stepThree_corp', P+'process2_stepThree_entity', True, spaceChar, fileNum)
+    checkCorpEnti(P+'process2_stepFour_corp', P+'process2_stepThree_entity', True, spaceChar, fileNum)
     
     
 if __name__ == '__main__':
     #main()
-    #toSentence('__data__/MADE-1.0/process2_stepFour_corp','__data__/MADE-1.0/corp_sentence')
-    max_length('__data__/MADE-1.0/corp_sentence')
+    toSentence('__data__/MADE-1.0-test/process2_stepFour_corp','__data__/MADE-1.0-test/corp_sentence')
+    #max_length('__data__/MADE-1.0-test/corp_sent_cut100')

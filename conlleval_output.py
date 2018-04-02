@@ -2,6 +2,7 @@ import os
 import sys
 import my_utils as util
 import keras.models as km
+from keras_contrib.layers.crf import CRF
 import gen_dataset as gen
 import numpy as np
 import pickle
@@ -85,40 +86,66 @@ def cmp_file(x):
     return int(c[0]) * 100000 + int(c[1])
     
 # get the prediction and truth
-def gen_pred_tru(modelFile, shiftSize, shift, multi):
+def gen_pred_tru(modelFile, shiftSize, shift, multi, sent=False, nclass=0):
     if multi:
-        trainPath = '__data__/MADE-1.0/process2_stepFour_corp'
-        truthPath = '__data__/MADE-1.0/process2_stepThree_entity'
+        trainPath = '__data__/MADE-1.0/process2_stepFour_corp%d'%(shift)
+        truthPath = '__data__/MADE-1.0/process2_stepThree_entity%d'%(shift)
     else:
         trainPath = '__data__/MADE-1.0/process_stepFour_corp'
         truthPath = '__data__/MADE-1.0/process_stepThree_entity'
     # cross validation
     flist = util.sorted_file_list(trainPath, cmp_file)
-    flist = gen.cycleShift(flist, shift, shiftSize)
+    #flist = gen.cycleShift(flist, shift, shiftSize)
     vocabPath = 'vocab_made_8000.pkl'
     with open(vocabPath, 'rb') as handle:   # load vocabulary from file
         vocab = pickle.load(handle)
     # generate x and y
-    trainx = gen.getIndex(trainPath, flist, vocab)
+    x = gen.getIndex(trainPath, flist[:shiftSize], vocab)
     if multi:
-        trainy = gen.genResultBin(truthPath, flist)
+        y = gen.genResultBin(truthPath, flist[:shiftSize])
     else:
-        trainy = gen.genResult(truthPath,flist)
-    '''
-    for i in range(len(trainy)):
-        for j in range(len(trainy[i])):
-            try:
-                index = trainy[i][j].index(1)
-            except Exception:
-                print(Exception)
-                print(flist[i],j)
-                exit()
-    '''
-    testData, testResult = gen.genTrainDataset(trainx[0:shiftSize], trainy[0:shiftSize], 20, 20)
+        y = gen.genResult(truthPath,flist[:shiftSize])
+    if nclass != 0:
+        y = gen.twoClass(y, nclass)
+    if sent:
+        testx, testy =  gen.toSent(flist[:shiftSize], trainPath, x, y)
+        testData, testResult = gen.padSent(testx, testy, 100)
+    else:
+        testData, testResult = gen.genTrainDataset(x, y, 20, 20)
     
     model = km.load_model(modelFile)
     predict = model.predict(np.array(testData))
     return flist[0:shiftSize], predict, testResult
+    
+def gen_pred_tru_test(modelFile, multi, sent=False, nclass=0):
+    if multi:
+        trainPath = '__data__/MADE-1.0-test/process2_stepFour_corp'
+        truthPath = '__data__/MADE-1.0-test/process2_stepThree_entity'
+    else:
+        trainPath = '__data__/MADE-1.0-test/process_stepFour_corp'
+        truthPath = '__data__/MADE-1.0-test/process_stepThree_entity'
+    flist = os.listdir(trainPath)
+    #flist = gen.cycleShift(flist, shift, shiftSize)
+    vocabPath = 'vocab_made_8000.pkl'
+    with open(vocabPath, 'rb') as handle:   # load vocabulary from file
+        vocab = pickle.load(handle)
+    # generate x and y
+    x = gen.getIndex(trainPath, flist, vocab)
+    if multi:
+        y = gen.genResultBin(truthPath, flist)
+    else:
+        y = gen.genResult(truthPath,flist)
+    if nclass != 0:
+        y = gen.twoClass(y, nclass)
+    if sent:
+        testx, testy =  gen.toSent(flist, trainPath, x, y)
+        testData, testResult = gen.padSent(testx, testy, 100)
+    else:
+        testData, testResult = gen.genTrainDataset(x, y, 20, 20)
+    
+    model = km.load_model(modelFile)
+    predict = model.predict(np.array(testData))
+    return flist, predict, testResult
     
 # determine whether the token has multiple lables
 def is_multi(entity):
@@ -196,14 +223,46 @@ def conll_output(flist, corpPath, pred, tru, coeff):
                     break
             if text[-1] != '.':
                 tar.write('\n')
+def conll_output_s(flist, corpPath, pred, tru, coeff, index=0):
+    with open('con_output%d'%(index), 'wt') as tar:
+        i = 0
+        for f in flist:
+            spaces = [-1]
+            with open(os.path.join(corpPath, f)) as src:
+                content = src.read().strip()
+                # find positions of spaces
+                for m in range(len(content)):
+                    if content[m] == ' ':
+                        spaces.append(m)
+                text = content.split('\n')
+            for sent in text:
+                words = sent.strip().split(' ')
+                
+                for j in range(len(words)):
+                    start = spaces[j]+1
+                    tar.write(conll_formatter(words[j], start, f, pred[i][j], tru[i][j], coeff))
+                i += 1
+                
 
 if __name__ == '__main__':
+    P = '__data__/MADE-1.0-test/'
     multi = True
-    coeff = 0.8
-    modelFile = 'model_made_90-%s_%s-epoch.h5'%(sys.argv[2], sys.argv[1])
-    print(modelFile)
-    flist, pred, tru = gen_pred_tru(modelFile, 90, int(sys.argv[2]), multi)
-    #print_multi(pred,tru)
-    corpPath = '__data__/MADE-1.0/process2_stepFour_corp'
-    conll_output(flist, corpPath, pred, tru, coeff)
-    
+    coeff = float(sys.argv[3])
+    modelFile = 'model_made_36-epoch.h5'
+    #modelFile = 'models-scikit-10/model_made_90-%s_%s-epoch.h5'%(sys.argv[2], sys.argv[1])
+    print(modelFile, coeff)
+    if sys.argv[4] == 'w':# word level
+        corpPath = P+'process2_stepFour_corp'+sys.argv[2] 
+        flist, pred, tru = gen_pred_tru(modelFile, 90, int(sys.argv[2]), multi, nclass=int(sys.argv[5]))
+        #print_multi(pred,tru)
+        conll_output(flist, corpPath, pred, tru, coeff)
+    elif sys.argv[4] == 's':# sentence level
+        corpPath = P+'corp_sent_cut100'
+        flist, pred, tru = gen_pred_tru_test(modelFile, multi, sent=True, nclass=int(sys.argv[5]))
+        conll_output_s(flist, corpPath, pred, tru, coeff)
+        '''
+        flist, pred, tru = gen_pred_tru(modelFile, 90, int(sys.argv[2]), multi, sent=True, nclass=int(sys.argv[5]))
+        #print_multi(pred,tru)
+        flist = gen.cycleShift(util.sorted_file_list(corpPath, cmp_file), int(sys.argv[2]), 90)
+        conll_output_s(flist[:90], corpPath, pred, tru, coeff)
+        '''

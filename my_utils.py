@@ -1,4 +1,5 @@
 import os
+import shutil
 import numpy as np
 import pickle
 
@@ -45,6 +46,8 @@ def findIndex(array, coeff=1, thres=None):
     indexs = []
     if thres == None:
         thres = np.amax(array) * coeff
+        if thres == 0:
+            thres = 1
     for i in range(len(array)):
         if array[i] >= thres:
             indexs.append(i)
@@ -82,11 +85,11 @@ def join_files(path, fileName='joint_file.txt', separator=''):
 # generate vocabulary (a dict) and weights (2D np array) from a gensim style embedding file
 def gen_weights_vocab(modelFile, name='', saveFlag=True):
     vocab = {}  # dict {'word': index, ...}
-    with open(modelFile,'r') as f:
-        line = f.readline()
+    with open(modelFile,'rb') as f:
+        line = f.readline().decode('utf-8')
         [length, dim] = line.split(' ')
         weights = np.zeros((int(length)+1, int(dim)), dtype = np.float64)    #  2-d array [[vector], ...]
-        line = f.readline()
+        line = f.readline().decode('utf-8')
         i = 1
         while line != '':
             index = line.find(' ')
@@ -99,8 +102,10 @@ def gen_weights_vocab(modelFile, name='', saveFlag=True):
                     print('float' + e)
             vocab[word] = i
             weights[i] = np.array(vector)
-            line = f.readline()
+            line = f.readline().decode('utf-8')
             i = i+1
+    if 'unk' in vocab:
+        vocab['UNK'] = vocab.pop('unk')
     if saveFlag:
         # write into files
         np.save('weights_%s_%d.npy'%(name, len(vocab)), weights)
@@ -120,12 +125,25 @@ def del_linefeed(string, chara=' '):
 
 # convert a number to a list of 0 and 1 which indicates the binary format
 # example: 6 -> [0, 1, 1]
-def numToBin(num):
+def numToBin(num, length=19):
     result = []
-    for i in range(19):
+    for i in range(length):
         result.append(num&1)
         num = num >> 1
     return result
+
+def shiftFiles(flist, path, newPath, shiftSize, shift, tail=''):    
+    if not os.path.exists(newPath):
+        os.makedirs(newPath)
+        
+    start = shiftSize*shift
+    for i in range(0, start):
+        shutil.copy(os.path.join(path,flist[i]+tail),os.path.join(newPath,flist[i]+tail))
+        
+    for i in range(start, min(start+shiftSize, len(flist))):
+        shutil.copy(os.path.join(path,flist[i]+tail),os.path.join(newPath,'0_%d%s'%(i,tail)))
+    for i in range(start+shiftSize, len(flist)):
+        shutil.copy(os.path.join(path,flist[i]+tail),os.path.join(newPath,flist[i]+tail))
     
 if __name__ == '__main__':
     join_files('__data__/MADE-1.0/process_stepFour_corp', separator=' . ')

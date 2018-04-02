@@ -1,6 +1,7 @@
 # scripts
 *.cmd
 *.sh
+*.pl
 
 # binary data
 *.npy

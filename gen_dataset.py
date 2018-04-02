@@ -29,7 +29,7 @@ def indexFile(src, vocab):
             index.append(vocab['UNK'])
     return index
 
-# return a list ("results") of lists, and each nested list ("entities") is a list of entity vectors
+# return a list ("results") of lists, and each nested list ("entities", represents a file) is a list of entity vectors
 def genResult(path, flist):
     # map entities to vectors
     results = []
@@ -51,26 +51,23 @@ def genResultBin(path, flist):
     for f in flist:
         entities = []
         c = np.load(os.path.join(path, f+'.npy'))
-        entities.append(numToBin(c[0]))
+        entities.append(util.numToBin(c[0]))
         for i in range(1,len(c)):
             if c[i] == 0: #split spaces
-                entities.append(numToBin(c[i+1]))
+                entities.append(util.numToBin(c[i+1]))
         results.append(entities)
     return results
-def numToBin(num):
-    result = []
-    for i in range(19):
-        result.append(num&1)
-        num = num >> 1
-    return result
 
 # use window method to cut datasets for training
-def genTrainDataset(trainx, trainy, windowsize, step):
+def genTrainDataset(trainx, trainy, windowsize, step,padding=None):
     data = []
     result = []
     for i in range(0, len(trainx)):
-        data.extend(window(trainx[i],windowsize,step,0)) # 0 or 1 ?
-        result.extend(window(trainy[i],windowsize,step,entityDict['X']))
+        data.extend(window(trainx[i],windowsize,step,1)) # 0 or 1 ?
+        if padding == None:
+            result.extend(window(trainy[i],windowsize,step,entityDict['X']))
+        else:
+            result.extend(window(trainy[i],windowsize,step,padding))
             
     return data, result 
 def window(data, windowsize, step, padding):
@@ -87,10 +84,108 @@ def window(data, windowsize, step, padding):
 
 # do a cycling shift on a list
 def cycleShift(flist, shift, shiftSize):
+    '''
     assert(shift*shiftSize < len(flist))
     shiftedList = flist[shift*shiftSize:]
     shiftedList.extend(flist[0:shift*shiftSize])
     return shiftedList
+    '''
+    assert(shift*shiftSize < len(flist))
+    start = shift*shiftSize
+    shiftedList = flist[start:min(start+shiftSize, len(flist))]
+    shiftedList.extend(flist[0:start])
+    shiftedList.extend(flist[start+shiftSize:len(flist)])
+    return shiftedList
+    
+
+# split tain data by sentences
+# input: trainx: 2-d, trainy: 3-d; output: x: 2-d, y: 3-d
+def toSent(flist, corpPath, trainx, trainy):
+    x, y = [], []
+    for j in range(len(flist)):
+        newText = ''
+        with open(os.path.join(corpPath, flist[j])) as src:
+            text = src.read().strip().split(' ')
+            start = 0
+            for i in range(len(text)):
+                if text[i] == '.':
+                    x.append(trainx[j][start:i+1])
+                    y.append(trainy[j][start:i+1])
+                    start = i+1
+            if text[-1] != '.':
+                x.append(trainx[j][start:])
+                y.append(trainy[j][start:])
+    return x, y
+
+# pad sentences to the same length
+def padSent(x, y, length):
+    x_pad, y_pad = [], []
+    for i in range(len(x)):
+        sent_len = len(x[i])
+        if sent_len > length:
+            x_pad.extend(cutSent(x[i], length, 1))
+            y_pad.extend(cutSent(y[i], length, entityDict['X']))
+        else:
+            tempx, tempy = x[i][:], y[i][:]
+            tempx.extend([1 for i in range(length-sent_len)])
+            tempy.extend([entityDict['X'] for i in range(length-sent_len)])
+            x_pad.append(tempx)
+            y_pad.append(tempy)
+    return x_pad, y_pad
+# cut a long sentences
+def cutSent(s, length, pad):    
+    s_cut = []
+    for i in range(int(len(s)/length)):
+        start = i * length
+        s_cut.append(s[start:start+length])
+    m = len(s)%length
+    if m != 0:
+        tail = s[-m:]
+        tail.extend([pad for i in range(length-m)])
+        s_cut.append(tail)
+    return s_cut
+
+# test toSent
+def testToSent():
+    def cmp_file(x):
+        c = x.split('_')
+        return int(c[0]) * 100000 + int(c[1])
+        
+    flist = util.sorted_file_list(trainPath, cmp_file)
+    trainx = getIndex(trainPath, flist, vocab)
+    trainy = genResultBin(truthPath, flist)
+    print('step 1')
+    assert(len(trainx) == 876)
+    assert(len(trainy) == 876)
+    
+    x, y = gen.toSent(flist, trainPath, trainx, trainy)
+    print('step 2')
+    assert(len(x) == len(y))
+    for i in range(len(x)):
+        assert(len(x[i]) == len(y[i]))
+    assert(len(x[0]) == 15)
+    assert(len(x[3]) == 2)
+    assert(len(x[99]) == 23)
+    assert(len(x[101]) == 5)
+    assert(len(x[118]) == 27)
+    assert(len(x[123]) == 16)
+    
+    x_pad, y_pad = padSent(x, y, 100)
+    print('step 3')
+    assert(len(x_pad) == len(y_pad))
+    for i in range(len(x)):
+        assert(len(x_pad[i]) == 100)
+        assert(len(y_pad[i]) == 100)
+    
+# convert to two-class
+def twoClass(data, n):
+    result = []
+    for entity in data:
+        newEnti = []
+        for vec in entity:
+            newEnti.append([0,1] if vec[n]==1 else [1,0])
+        result.append(newEnti)
+    return result
 
 def restore(flist, predict, windowSize=20, path='__data__/MADE-1.0/', newPath='__data__/MADE-1.0/restore'):
     if not os.path.exists(newPath):
@@ -275,6 +370,8 @@ def cmp_file(x):
 if __name__ == '__main__':
     #checkAll()
     #main()
+    pass
+    '''
     path = '__data__/MADE-1.0/corpus'
     flist = util.sorted_file_list(path, cmp_file)
     results = []
@@ -282,24 +379,5 @@ if __name__ == '__main__':
         for line in f:
             results.append(int(line.strip('\n').split(' ')[1]))
     restore(flist, results, windowSize=20, path='__data__/MADE-1.0/', newPath='__data__/MADE-1.0/pred1218')
-            
-    '''
-    path = '__data__/MADE-1.0/'
-    newPath = '__data__/MADE-1.0/restore'
-    if not os.path.exists(newPath):
-        os.makedirs(newPath)
+    '''    
     
-    flist = os.listdir(os.path.join(path,'process_stepThree_entity'))
-    for f in flist:
-        with open(os.path.join(path,'process_stepThree_entity',f)) as src:
-            entity = src.read()
-        
-        # three steps of restoring
-        entity = reverseStepOne(entity, os.path.join(path, 'process_stepThree_trace'), f)
-        #entity = reverseStepTwo(entity, os.path.join(path, 'process_stepTwo_trace'), f)
-        #entity = reverseStepThree(entity, os.path.join(path, 'process_stepOne_trace'), f)
-        with open(os.path.join(newPath, f), 'wt') as tar:
-            tar.write(entity)
-    
-    checkRestore(os.path.join(path, 'process_stepTwo_entity'), newPath)
-    '''

@@ -1,5 +1,12 @@
 import os
 import numpy as np
+
+ENTITIES = ['OTHER','B-ADE','I-ADE','B-Indication','I-Indication','B-SSLIF','I-SSLIF','B-Severity',\
+'I-Severity','B-Drugname','I-Drugname','B-Dosage','I-Dosage','B-Route','I-Route','B-Frequency',\
+'I-Frequency','B-Duration','I-Duration']
+
+ENTITYINDEX = {i:ENTITIES[i] for i in range(19)}
+
 '''
 from random import shuffle
 
@@ -78,5 +85,56 @@ def count_entities(path):
                 for i in range(len(index)):
                     result[index[i]] += 1
                     multi_enti[index[i]] += 1
+    # write into a file
+    with open('entities_count.txt','wt') as tar:
+        for i in range(19):
+            tar.write('%s\t%d\t%d\t%.2f%%\n'%(ENTITIES[i],result[i],multi_enti[i],multi_enti[i]*100/result[i]))
     return result, multi_enti
     
+# count the number of each nested pairs
+def count_nested_pairs(path):
+    result = dict()
+    flist = os.listdir(path)
+    for f in flist:
+        n = np.load(os.path.join(path, f))
+        for num in n:
+            index = util.findIndex(util.numToBin(num), thres=1)
+            if len(index) > 1:
+                key = '[%s'%ENTITIES[index[0]]
+                for i in range(1,len(index)):
+                    key += ',%s'%ENTITIES[index[i]]
+                key += ']'
+                if key in result:
+                    result[key] += 1
+                else:
+                    result[key] = 1
+    #write into a file
+    with open('nested_pairs.txt','wt') as tar:
+        for k,v in result.items():
+            tar.write('%s\t%d\n'%(k,v))
+    return result
+    
+# count the length of words
+def count_word_len(path):
+    result = dict()
+    flist = os.listdir(path)
+    for f in flist:
+        with open(os.path.join(path,f)) as src:
+            words = src.read().strip().split(' ')
+            for word in words:
+                if word.isalpha() or word.isdigit():
+                    length = int(len(word)/5)*5
+                    if length in result:
+                        result[length] += 1
+                    else:
+                        result[length] = 1
+    # write into a file
+    with open('word_len.txt','wt') as tar:
+        for k in sorted(result.keys()):
+            tar.write('%d\t%d\n'%(k,result[k]))
+    return result
+    
+P = '__data__/MADE2-1.0/'
+#count_entities(P+'process2_stepThree_entity')
+#count_word_len(P+'process2_stepFour_corp')
+count_nested_pairs(P+'process2_stepThree_entity')

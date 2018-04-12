@@ -52,12 +52,13 @@ print(type(vocabulary))
 print('Data size', len(vocabulary))
 
 # Step 2: Build the dictionary and replace rare words with UNK token.
-vocabulary_size = 8000
+vocabulary_size = 11000
 
 
 def build_dataset(words, n_words):
   """Process raw inputs into a dataset."""
   count = [['UNK', -1]]
+  print(len(collections.Counter(words)))
   count.extend(collections.Counter(words).most_common(n_words - 1))
   dictionary = dict()
   fid = open(metadata, 'w')
@@ -187,7 +188,7 @@ with graph.as_default():
   init = tf.global_variables_initializer()
 
 # Step 5: Begin training.
-num_steps = 100001
+num_steps = 75001
 
 # save to tensorboard summary
 savePath = os.path.join(LOG_DIR, 'model.ckpt')

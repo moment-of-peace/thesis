@@ -500,8 +500,8 @@ def mainProcess(P, fileNum, spaceChar = 0):
     
     
 if __name__ == '__main__':
-    P = '__data__/MADE2-1.0-test/'
-    fileNum = 213   #876 213
+    P = '__data__/MADE2-1.0/'
+    fileNum = 876   #876 213
     mainProcess(P, fileNum)
     toSentence(P + 'process2_stepFour_corp',P + 'corp_sentence')
     cutSentCorp(P + 'corp_sentence',100,P + 'corp_sent_cut%d'%100)

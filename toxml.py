@@ -149,7 +149,7 @@ if __name__ == '__main__':
     #vocabPath = 'vocab_made_8000.pkl'
     #vocabPath = 'vocab_glove_400000.pkl'
     vocabPath = 'vocab_nodiscard_8000.pkl'
-    modelFile = 'model_made_45-epoch.h5'
+    modelFile = 'model_made_25-epoch.h5'
     #modelFile = 'model_made_90-0_36-epoch-glove-sent.h5'
-    #test(nclass=17,P='__data__/MADE2-1.0-test/')
-    mainProcess(modelFile, vocabPath, P='__data__/MADE2-1.0-test/', nclass=0)
+    #test(nclass=0,P='__data__/MADE2-1.0-test/')
+    mainProcess(modelFile, vocabPath, P='__data__/MADE2-1.0-test/', nclass=5)

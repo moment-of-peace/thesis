@@ -3,10 +3,12 @@ generate corresponding results for training documents
 Author: Yi Liu
 '''
 import numpy as np
+import os
 import pickle
 import keras.layers as kl
 import keras.models as km
 import keras.optimizers as opt
+import keras.callbacks as kc
 from sklearn.model_selection import KFold
 #from keras_contrib.layers.crf import CRF
 
@@ -16,18 +18,24 @@ import getopt
 import my_utils as util
 import gen_dataset as gen
 
-def trainModel(trainData, trainResult, embedModel, epoch, outputsize):
+def trainModel(trainData, trainResult, embedModel, epoch, outputsize, units):
+    # call back functions
+    if not os.path.exists('checkpoints'):
+        os.makedirs('checkpoints')
+    earlyStop = kc.EarlyStopping(monitor='loss', mode='min')
+    checkpoint = kc.ModelCheckpoint('checkpoints/checkpoint.{epoch:02d}-{loss:.2f}.h5', monitor='loss', mode='min', period=2)
+    callback = [checkpoint]
     # build and fit model
     model = km.Sequential()
     model.add(kl.Embedding(embedModel.shape[0],embedModel.shape[1], mask_zero=True,weights=[embedModel]))
-    model.add(kl.Bidirectional(kl.LSTM(20,activation='relu',return_sequences=True))) # GRU?
-    model.add(kl.Bidirectional(kl.LSTM(20,activation='relu',return_sequences=True)))
+    model.add(kl.Bidirectional(kl.LSTM(units,activation='relu',return_sequences=True))) # GRU?
+    model.add(kl.Bidirectional(kl.LSTM(units,activation='relu',return_sequences=True)))
     model.add(kl.TimeDistributed(kl.Dense(outputsize)))
     #crf_layer = CRF(outputsize)
     #model.add(crf_layer)
     #model.compile('rmsprop', loss=crf_layer.loss_function, metrics=[crf_layer.accuracy])
     model.compile(loss='mean_squared_error', optimizer='adam')
-    model.fit(trainData, trainResult, epochs=epoch, batch_size=100, verbose=2)
+    model.fit(trainData, trainResult, epochs=epoch, batch_size=100, verbose=2, callbacks=callback)
     return model
 
 # evaluate
@@ -69,10 +77,10 @@ def main():
     outputsize = 19
     maxFold = 10
     folds = 10
-    
+    units = 20
 
     # parse arguments
-    options,args = getopt.getopt(sys.argv[1:],"w:v:x:y:s:S:W:e:c:m:f:")
+    options,args = getopt.getopt(sys.argv[1:],"w:v:x:y:s:S:W:e:c:m:f:u:")
     for opt, para in options:
         if opt == '-w':
             weightsPath = para
@@ -97,6 +105,8 @@ def main():
             maxFold = int(para)
         if opt == '-f':
             folds = int(para)
+        if opt == '-u':
+            units = int(para)
         
     # load weights and vocabulary
     embedModel = np.load(weightsPath)
@@ -127,7 +137,7 @@ def main():
             print(len(trainData),len(trainResult),len(testData),len(testResult))
             
             # train, predict, and evaluate
-            model = trainModel(np.array(trainData), np.array(trainResult), embedModel, epoch, outputsize)
+            model = trainModel(np.array(trainData), np.array(trainResult), embedModel, epoch, outputsize, units)
             model.save('model_made_%d-%d_%d-epoch.h5'%(shiftSize, fold, epoch))
             predict = model.predict(np.array(testData))
             pred, tru = evalModel(predict, np.array(testResult), shiftSize, fold, epoch)
@@ -138,7 +148,7 @@ def main():
     else:
         #np.save('trainx_%d-epoch'%(epoch),np.array(x_pad))
         #np.save('trainy_%d-epoch'%(epoch),np.array(y_pad))
-        model = trainModel(np.array(x_pad), np.array(y_pad), embedModel, epoch, outputsize)
+        model = trainModel(np.array(x_pad), np.array(y_pad), embedModel, epoch, outputsize, units)
         model.save('model_made_%d-epoch.h5'%(epoch))
     '''    
     
@@ -170,7 +180,7 @@ def main():
     
     
     # train, predict, and evaluate
-    model = trainModel(np.array(trainData), np.array(trainResult), embedModel, epoch, outputsize)
+    model = trainModel(np.array(trainData), np.array(trainResult), embedModel, epoch, outputsize, units)
     model.save('model_made_%d-%d_%d-epoch.h5'%(shiftSize, shift, epoch))
     predict = model.predict(np.array(testData))
     pred, tru = evalModel(predict, np.array(testResult), shiftSize, shift, epoch)

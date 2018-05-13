@@ -3,6 +3,7 @@ Entities represented by symbols:
     ADE:A Indication:I SSLIF:S Severity:V Drug:D Dose:O Route:R Frequency:F Duration:U
 '''
 import os
+import sys
 import xml.etree.ElementTree as et
 import numpy as np
 
@@ -500,8 +501,12 @@ def mainProcess(P, fileNum, spaceChar = 0):
     
     
 if __name__ == '__main__':
-    P = '__data__/MADE2-1.0/'
-    fileNum = 876   #876 213
+    if sys.argv[1] == '1':
+        P = '__data__/MADE2-1.0/'
+        fileNum = 876   #876 213
+    else:
+        P = '__data__/MADE2-1.0-test/'
+        fileNum = 213   #876 213
     mainProcess(P, fileNum)
     toSentence(P + 'process2_stepFour_corp',P + 'corp_sentence')
     cutSentCorp(P + 'corp_sentence',100,P + 'corp_sent_cut%d'%100)

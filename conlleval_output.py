@@ -245,7 +245,7 @@ def conll_output_s(flist, corpPath, pred, tru, coeff, index=0):
                 
 
 if __name__ == '__main__':
-    P = '__data__/MADE-1.0-test/'
+    P = '__data__/MADE2-1.0-test/'
     multi = True
     coeff = float(sys.argv[3])
     modelFile = 'model_made_36-epoch.h5'

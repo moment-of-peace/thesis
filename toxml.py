@@ -152,4 +152,4 @@ if __name__ == '__main__':
     modelFile = 'model_made_25-epoch.h5'
     #modelFile = 'model_made_90-0_36-epoch-glove-sent.h5'
     #test(nclass=0,P='__data__/MADE2-1.0-test/')
-    mainProcess(modelFile, vocabPath, P='__data__/MADE2-1.0-test/', nclass=5)
+    mainProcess(modelFile, vocabPath, P='__data__/MADE2-1.0-test/', nclass=0)

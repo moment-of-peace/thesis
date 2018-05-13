@@ -17,25 +17,30 @@ import getopt
 
 import my_utils as util
 import gen_dataset as gen
+from toxml import mainProcess
 
-def trainModel(trainData, trainResult, embedModel, epoch, outputsize, units):
+def trainModel(trainData, trainResult, embedModel, epoch, outputsize, units, batch_size):
     # call back functions
     if not os.path.exists('checkpoints'):
         os.makedirs('checkpoints')
-    earlyStop = kc.EarlyStopping(monitor='loss', mode='min')
+    earlyStop = kc.EarlyStopping(monitor='loss', mode='min', patience=3)
     checkpoint = kc.ModelCheckpoint('checkpoints/checkpoint.{epoch:02d}-{loss:.2f}.h5', monitor='loss', mode='min', period=2)
-    callback = [checkpoint]
+    callback = [checkpoint,earlyStop]
     # build and fit model
     model = km.Sequential()
-    model.add(kl.Embedding(embedModel.shape[0],embedModel.shape[1], mask_zero=True,weights=[embedModel]))
-    model.add(kl.Bidirectional(kl.LSTM(units,activation='relu',return_sequences=True))) # GRU?
-    model.add(kl.Bidirectional(kl.LSTM(units,activation='relu',return_sequences=True)))
-    model.add(kl.TimeDistributed(kl.Dense(outputsize)))
+    embed = kl.Embedding(embedModel.shape[0],embedModel.shape[1], mask_zero=True,weights=[embedModel])
+    embed.trainable = False
+    model.add(embed)
+    model.add(kl.Bidirectional(kl.LSTM(units,activation='relu',return_sequences=True,dropout=0.4))) # GRU?
+    #model.add(kl.Bidirectional(kl.LSTM(units,activation='relu',return_sequences=True,dropout=0.4)))
+    model.add(kl.TimeDistributed(kl.Dense(outputsize))) #activation='sigmoid'
     #crf_layer = CRF(outputsize)
     #model.add(crf_layer)
     #model.compile('rmsprop', loss=crf_layer.loss_function, metrics=[crf_layer.accuracy])
     model.compile(loss='mean_squared_error', optimizer='adam')
-    model.fit(trainData, trainResult, epochs=epoch, batch_size=100, verbose=2, callbacks=callback)
+    model.summary()
+    print('train data size:',trainData.shape,trainResult.shape)
+    model.fit(trainData, trainResult, epochs=epoch, batch_size=batch_size, verbose=2, callbacks=callback)
     return model
 
 # evaluate
@@ -78,9 +83,10 @@ def main():
     maxFold = 10
     folds = 10
     units = 20
+    batch_size = 100
 
     # parse arguments
-    options,args = getopt.getopt(sys.argv[1:],"w:v:x:y:s:S:W:e:c:m:f:u:")
+    options,args = getopt.getopt(sys.argv[1:],"w:v:x:y:W:e:c:m:f:u:b:")
     for opt, para in options:
         if opt == '-w':
             weightsPath = para
@@ -90,10 +96,6 @@ def main():
             trainPath = para
         if opt == '-y':
             truthPath = para
-        if opt == '-s':
-            shift = int(para)
-        if opt == '-S':
-            shiftSize = int(para)
         if opt == '-W':
             windowSize = int(para)
         if opt == '-e':
@@ -107,6 +109,8 @@ def main():
             folds = int(para)
         if opt == '-u':
             units = int(para)
+        if opt == '-b':
+            batch_size = int(para)
         
     # load weights and vocabulary
     embedModel = np.load(weightsPath)
@@ -137,7 +141,7 @@ def main():
             print(len(trainData),len(trainResult),len(testData),len(testResult))
             
             # train, predict, and evaluate
-            model = trainModel(np.array(trainData), np.array(trainResult), embedModel, epoch, outputsize, units)
+            model = trainModel(np.array(trainData), np.array(trainResult), embedModel, epoch, outputsize, units, batch_size)
             model.save('model_made_%d-%d_%d-epoch.h5'%(shiftSize, fold, epoch))
             predict = model.predict(np.array(testData))
             pred, tru = evalModel(predict, np.array(testResult), shiftSize, fold, epoch)
@@ -148,8 +152,12 @@ def main():
     else:
         #np.save('trainx_%d-epoch'%(epoch),np.array(x_pad))
         #np.save('trainy_%d-epoch'%(epoch),np.array(y_pad))
-        model = trainModel(np.array(x_pad), np.array(y_pad), embedModel, epoch, outputsize, units)
-        model.save('model_made_%d-epoch.h5'%(epoch))
+        model = trainModel(np.array(x_pad), np.array(y_pad), embedModel, epoch, outputsize, units, batch_size)
+        modelFile = 'model_made_%d-epoch.h5'%(epoch)
+        model.save(modelFile)
+        
+        mainProcess(modelFile, vocabPath, P='__data__/MADE2-1.0-test/', nclass=0)
+        
     '''    
     
     # cross validation
@@ -180,7 +188,7 @@ def main():
     
     
     # train, predict, and evaluate
-    model = trainModel(np.array(trainData), np.array(trainResult), embedModel, epoch, outputsize, units)
+    model = trainModel(np.array(trainData), np.array(trainResult), embedModel, epoch, outputsize, units, batch_size)
     model.save('model_made_%d-%d_%d-epoch.h5'%(shiftSize, shift, epoch))
     predict = model.predict(np.array(testData))
     pred, tru = evalModel(predict, np.array(testResult), shiftSize, shift, epoch)

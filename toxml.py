@@ -95,10 +95,10 @@ def test(nclass=0,P='__data__/MADE-1.0-test/'):
             assert(indices[-1][1]<=len(text))
         writeXML(flist[i], text, indices, truth[i], path=outpath,nclass=nclass)
     
-def mainProcess(modelFile, vocabPath,P='__data__/MADE-1.0-test/',nclass=0):
+def mainProcess(modelFile, vocabPath, load_file=True, P='__data__/MADE2-1.0-test/', nclass=0, cut=100):
     global anno_id
     anno_id = 0
-    corpCutPath = P+'corp_sent_cut100'
+    corpCutPath = '%scorp_sent_cut%d'%(P, cut)
     corpPath = P + 'corpus'
     trainPath = P + 'process2_stepFour_corp'
     truthPath = P + 'process2_stepThree_entity'
@@ -115,9 +115,12 @@ def mainProcess(modelFile, vocabPath,P='__data__/MADE-1.0-test/',nclass=0):
     y = gen.genResultBin(truthPath, flist)
     
     testx, testy =  gen.toSent(flist, trainPath, x, y)
-    testData, testResult = gen.padSent(testx, testy, 100)
+    testData, testResult = gen.padSent(testx, testy, cut)
     # predict
-    model = km.load_model(modelFile)
+    if load_file:
+        model = km.load_model(modelFile)
+    else:
+        model = modelFile
     predict = model.predict(np.array(testData))
     #write xml
     start = 0

@@ -146,6 +146,28 @@ def cutSent(s, length, pad):
         s_cut.append(tail)
     return s_cut
 
+# generate charcater level indices. input: 2-d list. output: 3-d
+def gen_char_indices(token_indices, vocab):
+    words = {v:k for k,v in vocab.items()}
+    char_indices = []
+    for sent in token_indices:
+        sent_char = []
+        for index in sent:
+            word = words[index].lower()
+            word_char = [to_char_index(c) for c in word[:10]]
+            if len(word_char) < 10:
+                word_char.extend([0 for i in range(10-len(word_char))])
+            sent_char.append(word_char)
+        char_indices.append(sent_char)
+    return char_indices
+def to_char_index(chara):
+    num = 63
+    if chara.isalpha():
+        num = ord(chara) - ord('a') + 1
+    elif chara.isdigit():
+        num = 56
+    return num  #[(num&2**i)>>i for i in range(5)]
+
 # test toSent
 def testToSent():
     def cmp_file(x):

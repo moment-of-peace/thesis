@@ -124,6 +124,16 @@ def gen_weights_vocab(modelFile, name='', saveFlag=True):
             pickle.dump(vocab, handle)
     return vocab, weights
 
+# generate weights for char level embedding
+def gen_char_weights(dim, path='', saveFlag=False):
+    weights = []
+    for i in range(2**dim):
+        weights.append([(i&2**j)>>j for j in range(dim)])
+    weights = np.array(weights)
+    if saveFlag:
+        np.save('%schar_weights_%d'%(path, dim), weights)
+    return weights
+
 # replace line feed
 def del_linefeed(string, chara=' '):
     result = ''
